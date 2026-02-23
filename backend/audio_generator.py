@@ -1,42 +1,31 @@
 import os
 import re
-import pyttsx3
+from gtts import gTTS
 
-print("=== Scene-wise Audio Generator ===")
+print("=== Audio Generator (Colab Version) ===")
 
 os.makedirs("audio", exist_ok=True)
 
-narration_path = "data/narration.txt"
+path = "data/narration.txt"
 
-if not os.path.exists(narration_path):
-    print("❌ narration.txt not found!")
+if not os.path.exists(path):
+    print("narration.txt not found")
     exit()
 
-with open(narration_path, "r", encoding="utf-8") as f:
+with open(path, "r", encoding="utf-8") as f:
     content = f.read()
 
-# multi-line scene extraction
 scenes = re.findall(
     r"Scene \d+:\s*(.*?)(?=\nScene|\Z)",
     content,
     re.DOTALL
 )
 
-if not scenes:
-    print("❌ No scenes found in narration.txt")
-    exit()
-
-engine = pyttsx3.init()
-engine.setProperty("rate", 170)
-
-voices = engine.getProperty("voices")
-engine.setProperty("voice", voices[0].id)
-
 for i, text in enumerate(scenes, start=1):
     filename = f"audio/scene{i}.wav"
-    print(f"Generating {filename}")
-    engine.save_to_file(text.strip(), filename)
+    print("Generating", filename)
 
-engine.runAndWait()
+    tts = gTTS(text)
+    tts.save(filename)
 
-print("✅ All audio generated!")
+print("Audio generated!")

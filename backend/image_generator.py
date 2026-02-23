@@ -10,7 +10,7 @@ pipe = StableDiffusionPipeline.from_pretrained(
     "runwayml/stable-diffusion-v1-5"
 )
 
-pipe = pipe.to("cpu")
+pipe = pipe.to("cuda")
 pipe.enable_attention_slicing()  # faster CPU
 
 
