@@ -1,11 +1,15 @@
 import json
 import os
 from datetime import datetime
+
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_community.llms import Ollama
 from langchain_core.documents import Document
+
+# NEW — HuggingFace LLM
+from transformers import pipeline
+from langchain_community.llms import HuggingFacePipeline
 
 
 # ==============================
@@ -14,10 +18,8 @@ from langchain_core.documents import Document
 
 DATA_PATH = "project_knowledge.json"
 VECTOR_DB_PATH = "project_vector_db"
-OLLAMA_MODEL = "llama3:8b"
 OUTPUT_LOG_FILE = "rag_output.txt"
 
-# similarity threshold (lower = stricter match)
 SIMILARITY_THRESHOLD = 0.4
 
 
@@ -108,17 +110,19 @@ def load_vector_db(embeddings):
 
 
 # ==============================
-# STEP 6 — Load Ollama LLM
+# STEP 6 — Load HuggingFace LLM (COLAB FRIENDLY)
 # ==============================
 
 def load_llm():
-    print("Loading Ollama model...")
+    print("Loading HuggingFace LLM...")
 
-    try:
-        return Ollama(model=OLLAMA_MODEL, base_url="http://localhost:11434")
-    except Exception as e:
-        print("❌ Ollama not running:", e)
-        exit()
+    pipe = pipeline(
+        "text2text-generation",
+        model="google/flan-t5-large",   # fast + good quality
+        device=0  # use GPU in Colab
+    )
+
+    return HuggingFacePipeline(pipeline=pipe)
 
 
 # ==============================
@@ -137,18 +141,14 @@ def ask_question(query, vector_db, llm):
     for doc in docs:
         title = doc.metadata.get("title", "").lower()
         if query.lower() in title:
-            print("✅ Exact project title match found")
+            print("Exact project title match found")
 
             context = f"Project Title: {doc.metadata['title']}\n{doc.page_content}"
 
             prompt = f"""
-You are a software project documentation assistant.
-
 Use ONLY the context below.
 
-Extract ALL available information and return structured output.
-
-Return EXACT format:
+Return structured output:
 
 Project Overview:
 Objective:
@@ -163,13 +163,10 @@ Implementation Steps:
 Benefits:
 Future Scope:
 
-Rules:
-- Do NOT add extra information
-- If section missing → write "Not mentioned"
-
 Context:
 {context}
 """
+
             return llm.invoke(prompt)
 
     # -----------------------------
@@ -182,7 +179,7 @@ Context:
         print("Best similarity score:", best_score)
 
         if best_score < SIMILARITY_THRESHOLD:
-            print("✅ Similar project found (semantic match)")
+            print("Similar project found")
 
             context = "\n\n".join([
                 f"Project Title: {doc.metadata.get('title','')}\n{doc.page_content}"
@@ -190,13 +187,7 @@ Context:
             ])
 
             prompt = f"""
-You are a software project documentation assistant.
-
-Use ONLY the context below.
-
-Extract all available details and return structured output.
-
-Return format:
+Extract structured project details:
 
 Project Overview:
 Objective:
@@ -214,19 +205,20 @@ Future Scope:
 Context:
 {context}
 """
+
             return llm.invoke(prompt)
 
     # -----------------------------
-    # 3️⃣ No Match → Generate New Project
+    # 3️⃣ No Match → Generate New
     # -----------------------------
-    print("⚠ Project not found → generating new project info")
+    print("Project not found → generating new info")
 
     prompt = f"""
 Generate complete software project documentation for:
 
 {query}
 
-Return structured output:
+Return:
 
 Project Title:
 Project Overview:
@@ -241,14 +233,13 @@ Output:
 Implementation Steps:
 Benefits:
 Future Scope:
-
-Provide realistic and detailed explanation.
 """
+
     return llm.invoke(prompt)
 
 
 # ==============================
-# SAVE OUTPUT TO FILE (OVERWRITE)
+# SAVE OUTPUT
 # ==============================
 
 def save_output(query, answer):
@@ -259,44 +250,32 @@ def save_output(query, answer):
         f.write(f"Question:\n{query}\n\n")
         f.write("Answer:\n")
         f.write(str(answer) + "\n")
-        f.write("=" * 60 + "\n")
 
-    print("✅ Output overwritten →", OUTPUT_LOG_FILE)
+    print("Output saved →", OUTPUT_LOG_FILE)
 
 
 # ==============================
-# MAIN PIPELINE (RUN ONCE)
+# MAIN
 # ==============================
 
 if __name__ == "__main__":
 
     print("\n===== PROJECT RAG SYSTEM =====\n")
 
-    # clear old output
     open(OUTPUT_LOG_FILE, "w").close()
 
     embeddings = get_embeddings()
 
     try:
         vector_db = load_vector_db(embeddings)
-        print("Using existing vector database:", VECTOR_DB_PATH)
-    except Exception as e:
-        print("No vector database found. Building new one...\n")
-        print("Reason:", e)
+    except:
         documents = load_projects()
         chunks = create_chunks(documents)
         vector_db = build_vector_db(chunks, embeddings)
 
     llm = load_llm()
 
-    print("\nRAG system ready!")
-    print("Output will be saved in:", OUTPUT_LOG_FILE)
-
-    # ⭐ run once (pipeline friendly)
-    query = input("\nAsk about any project: ")
-
-    if query.lower() == "exit":
-        exit()
+    query = input("Ask about any project: ")
 
     answer = ask_question(query, vector_db, llm)
 
