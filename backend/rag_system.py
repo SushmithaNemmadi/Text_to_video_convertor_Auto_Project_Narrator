@@ -6,12 +6,9 @@ import torch
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
-
-# Updated embeddings package
 from langchain_huggingface import HuggingFaceEmbeddings
 
-# HuggingFace LLM
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from langchain_community.llms import HuggingFacePipeline
 
 
@@ -27,7 +24,7 @@ SIMILARITY_THRESHOLD = 0.4
 
 
 # ==============================
-# STEP 1 — Load JSON Dataset
+# LOAD PROJECT DATA
 # ==============================
 
 def load_projects():
@@ -55,56 +52,41 @@ def load_projects():
 
 
 # ==============================
-# STEP 2 — Split into Chunks
+# SPLIT INTO CHUNKS
 # ==============================
 
 def create_chunks(documents):
-    print("Splitting documents into chunks...")
-
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=1500,
         chunk_overlap=200
     )
-
-    chunks = splitter.split_documents(documents)
-
-    print("Total chunks created:", len(chunks))
-    return chunks
+    return splitter.split_documents(documents)
 
 
 # ==============================
-# STEP 3 — Create Embeddings
+# EMBEDDINGS
 # ==============================
 
 def get_embeddings():
     print("Loading embedding model...")
-
     return HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
 
 
 # ==============================
-# STEP 4 — Build Vector Database
+# VECTOR DB
 # ==============================
 
 def build_vector_db(chunks, embeddings):
     print("Creating FAISS vector database...")
-
     vector_db = FAISS.from_documents(chunks, embeddings)
     vector_db.save_local(VECTOR_DB_PATH)
-
-    print("Vector database saved!")
     return vector_db
 
 
-# ==============================
-# STEP 5 — Load Vector DB
-# ==============================
-
 def load_vector_db(embeddings):
     print("Loading existing vector database...")
-
     return FAISS.load_local(
         VECTOR_DB_PATH,
         embeddings,
@@ -113,121 +95,59 @@ def load_vector_db(embeddings):
 
 
 # ==============================
-# STEP 6 — Load HuggingFace LLM (FINAL FIXED VERSION)
+# LOAD LLM (STABLE VERSION)
 # ==============================
 
 def load_llm():
     print("Loading HuggingFace LLM...")
 
-    model_name = "google/flan-t5-base"
+    model_name = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(model_name)
 
     device = 0 if torch.cuda.is_available() else -1
 
     pipe = pipeline(
-        task="text2text-generation",
+        task="text-generation",
         model=model,
         tokenizer=tokenizer,
         device=device,
         max_new_tokens=512,
-        do_sample=False
+        do_sample=False,
+        temperature=0.2
     )
 
     return HuggingFacePipeline(pipeline=pipe)
 
 
 # ==============================
-# STEP 7 — Ask Question (HYBRID RAG)
+# ASK QUESTION (RAG)
 # ==============================
 
 def ask_question(query, vector_db, llm):
 
     print("Searching knowledge base...")
 
-    # 1️⃣ Exact Match
-    docs = vector_db.similarity_search(query, k=10)
+    docs = vector_db.similarity_search(query, k=5)
 
-    for doc in docs:
-        title = doc.metadata.get("title", "").lower()
-        if query.lower() in title:
-            print("Exact project title match found")
-
-            context = f"Project Title: {doc.metadata['title']}\n{doc.page_content}"
-
-            prompt = f"""
-Use ONLY the context below.
-
-Return structured output:
-
-Project Overview:
-Objective:
-Domain:
-Software Requirements:
-Hardware Requirements:
-Workflow:
-System Architecture:
-Input:
-Output:
-Implementation Steps:
-Benefits:
-Future Scope:
-
-Context:
-{context}
-"""
-
-            return llm.invoke(prompt)
-
-    # 2️⃣ Semantic Match
-    docs_with_scores = vector_db.similarity_search_with_score(query, k=3)
-
-    if docs_with_scores:
-        best_score = docs_with_scores[0][1]
-        print("Best similarity score:", best_score)
-
-        if best_score < SIMILARITY_THRESHOLD:
-            print("Similar project found")
-
-            context = "\n\n".join([
-                f"Project Title: {doc.metadata.get('title','')}\n{doc.page_content}"
-                for doc, _ in docs_with_scores
-            ])
-
-            prompt = f"""
-Extract structured project details:
-
-Project Overview:
-Objective:
-Domain:
-Software Requirements:
-Hardware Requirements:
-Workflow:
-System Architecture:
-Input:
-Output:
-Implementation Steps:
-Benefits:
-Future Scope:
-
-Context:
-{context}
-"""
-
-            return llm.invoke(prompt)
-
-    # 3️⃣ No Match
-    print("Project not found → generating new info")
+    context = "\n\n".join(
+        [doc.page_content for doc in docs]
+    )
 
     prompt = f"""
-Generate complete software project documentation for:
+You are a software project documentation assistant.
 
+Using the context below, generate structured output.
+
+Context:
+{context}
+
+Question:
 {query}
 
-Return:
+Return structured format:
 
-Project Title:
 Project Overview:
 Objective:
 Domain:
@@ -250,7 +170,6 @@ Future Scope:
 # ==============================
 
 def save_output(query, answer):
-
     with open(OUTPUT_LOG_FILE, "w", encoding="utf-8") as f:
         f.write("=" * 60 + "\n")
         f.write(f"Time: {datetime.now()}\n\n")
