@@ -1,16 +1,17 @@
 import json
 import os
 from datetime import datetime
+import torch
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 
-# Updated Embeddings (new recommended package)
+# Updated embeddings package
 from langchain_huggingface import HuggingFaceEmbeddings
 
 # HuggingFace LLM
-from transformers import pipeline
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
 from langchain_community.llms import HuggingFacePipeline
 
 
@@ -112,17 +113,24 @@ def load_vector_db(embeddings):
 
 
 # ==============================
-# STEP 6 — Load HuggingFace LLM (FIXED VERSION)
+# STEP 6 — Load HuggingFace LLM (FINAL FIXED VERSION)
 # ==============================
 
 def load_llm():
     print("Loading HuggingFace LLM...")
 
-    # FLAN-T5 works best with text2text pipeline,
-    # but some Colab versions require auto-detection.
+    model_name = "google/flan-t5-base"
+
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+
+    device = 0 if torch.cuda.is_available() else -1
+
     pipe = pipeline(
-        model="google/flan-t5-base",
-        device=0,
+        task="text2text-generation",
+        model=model,
+        tokenizer=tokenizer,
+        device=device,
         max_new_tokens=512,
         do_sample=False
     )
