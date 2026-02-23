@@ -1,0 +1,52 @@
+============================================================
+Time: 2026-02-23 23:46:06.400707
+
+Question:
+Internet Based Live Courier Tracking And Delivery System
+
+Answer:
+Here is the extracted information in the exact format:
+
+**Project Overview:**
+The Internet Based Live Courier Tracking And Delivery System aims to develop a comprehensive platform that enables real-time tracking and monitoring of courier services, improving efficiency, transparency, and customer satisfaction.
+
+**Objective:**
+To design and implement an online system that allows customers to track their packages in real-time, providing updates on delivery status, location, and estimated time of arrival.
+
+**Domain:**
+E-commerce and Logistics
+
+**Software Requirements:**
+
+* Front-end: HTML5, CSS3, JavaScript
+* Back-end: Java or Python with Spring Boot or Flask framework
+* Database: MySQL or PostgreSQL
+* APIs: Integration with existing courier service APIs
+
+**Hardware Requirements:**
+Not mentioned
+
+**Workflow:**
+
+1. Customer places an order and tracks the package through the online platform.
+2. Courier receives the package and updates the tracking information in real-time.
+3. System sends notifications to customers regarding delivery status.
+
+**System Architecture:**
+The system will consist of a web-based interface for customer tracking, a backend API for integrating with courier services, and a database for storing tracking information.
+
+**Input:**
+Customer orders, tracking requests, and courier updates
+
+**Output:**
+Not mentioned
+
+**Implementation Steps:**
+Not mentioned
+
+**Benefits:**
+Not mentioned
+
+**Future Scope:**
+Not mentioned
+============================================================

@@ -1,0 +1,9 @@
+ai_env/
+venv/
+proj_env/
+.env
+__pycache__/
+dataset/
+data/
+*.mp4
+*.pdf
