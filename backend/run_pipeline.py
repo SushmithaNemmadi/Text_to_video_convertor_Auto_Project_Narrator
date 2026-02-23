@@ -33,6 +33,19 @@ def run_script(script_name):
 
 if __name__ == "__main__":
 
+    print("\nEnter Project Title:")
+    title = input()
+
+    print("\nEnter Project Description:")
+    description = input()
+
+    # Save input directly into rag_output.txt
+    with open("rag_output.txt", "w", encoding="utf-8") as f:
+        f.write(f"Project Title: {title}\n\n")
+        f.write(f"Project Description:\n{description}\n")
+
+    print("✅ Project input saved\n")
+
     for script in SCRIPTS:
         run_script(script)
 
