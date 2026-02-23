@@ -3,11 +3,13 @@ import os
 from datetime import datetime
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 
-# NEW — HuggingFace LLM
+# Updated Embeddings (new recommended package)
+from langchain_huggingface import HuggingFaceEmbeddings
+
+# HuggingFace LLM
 from transformers import pipeline
 from langchain_community.llms import HuggingFacePipeline
 
@@ -110,16 +112,19 @@ def load_vector_db(embeddings):
 
 
 # ==============================
-# STEP 6 — Load HuggingFace LLM (COLAB FRIENDLY)
+# STEP 6 — Load HuggingFace LLM (FIXED VERSION)
 # ==============================
 
 def load_llm():
     print("Loading HuggingFace LLM...")
 
+    # FLAN-T5 works best with text2text pipeline,
+    # but some Colab versions require auto-detection.
     pipe = pipeline(
-        "text2text-generation",
-        model="google/flan-t5-large",   # fast + good quality
-        device=0  # use GPU in Colab
+        model="google/flan-t5-base",
+        device=0,
+        max_new_tokens=512,
+        do_sample=False
     )
 
     return HuggingFacePipeline(pipeline=pipe)
@@ -133,9 +138,7 @@ def ask_question(query, vector_db, llm):
 
     print("Searching knowledge base...")
 
-    # -----------------------------
-    # 1️⃣ Exact Title Match
-    # -----------------------------
+    # 1️⃣ Exact Match
     docs = vector_db.similarity_search(query, k=10)
 
     for doc in docs:
@@ -169,9 +172,7 @@ Context:
 
             return llm.invoke(prompt)
 
-    # -----------------------------
-    # 2️⃣ Semantic Similarity Match
-    # -----------------------------
+    # 2️⃣ Semantic Match
     docs_with_scores = vector_db.similarity_search_with_score(query, k=3)
 
     if docs_with_scores:
@@ -208,9 +209,7 @@ Context:
 
             return llm.invoke(prompt)
 
-    # -----------------------------
-    # 3️⃣ No Match → Generate New
-    # -----------------------------
+    # 3️⃣ No Match
     print("Project not found → generating new info")
 
     prompt = f"""
