@@ -1,31 +1,35 @@
 import os
 import re
-from gtts import gTTS
+import pyttsx3
 
-print("=== Audio Generator (Colab Version) ===")
+print("=== ProjVision Part 3: Scene-wise Audio Generator ===")
 
 os.makedirs("audio", exist_ok=True)
 
-path = "data/narration.txt"
+# Load narration file
+narration_path = "data/narration.txt"
 
-if not os.path.exists(path):
-    print("narration.txt not found")
+if not os.path.exists(narration_path):
+    print("narration.txt not found!")
     exit()
 
-with open(path, "r", encoding="utf-8") as f:
+with open(narration_path, "r", encoding="utf-8") as f:
     content = f.read()
 
-scenes = re.findall(
-    r"Scene \d+:\s*(.*?)(?=\nScene|\Z)",
-    content,
-    re.DOTALL
-)
+# Extract scene narrations
+scenes = re.findall(r"Scene \d+:\s*(.+)", content)
+
+engine = pyttsx3.init()
+engine.setProperty('rate', 170)
+
+voices = engine.getProperty('voices')
+engine.setProperty('voice', voices[1].id)
 
 for i, text in enumerate(scenes, start=1):
-    filename = f"audio/scene{i}.wav"
-    print("Generating", filename)
+    filename = f"audio/scene{i}.mp3"
+    print(f"Generating {filename}")
+    engine.save_to_file(text, filename)
 
-    tts = gTTS(text)
-    tts.save(filename)
+engine.runAndWait()
 
-print("Audio generated!")
+print("\n✅ All scene audios generated successfully!")

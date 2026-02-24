@@ -4,86 +4,110 @@ import torch
 from diffusers import StableDiffusionPipeline
 from PIL import Image, ImageDraw, ImageFont
 
-print("Loading Stable Diffusion (CPU mode)...")
+print("Loading Animated Model (CPU mode)...")
 
 pipe = StableDiffusionPipeline.from_pretrained(
     "runwayml/stable-diffusion-v1-5"
 )
 
-pipe = pipe.to("cuda")
-pipe.enable_attention_slicing()  # faster CPU
+pipe = pipe.to("cpu")
 
 
-def extract_visuals(text):
-    return re.findall(
-        r"Visual:\s*(.*?)(?=\nScene|\Z)",
-        text,
-        re.DOTALL
-    )
+# ---------------------------
+# Extract Visual Prompts
+# ---------------------------
+def extract_visual_prompts(storyboard_text):
+    visuals = re.findall(r"Visual:\s*(.+)", storyboard_text)
+    return visuals
 
 
-def extract_narrations(text):
-    return re.findall(
-        r"Narration:\s*(.*?)(?=\nVisual:)",
-        text,
-        re.DOTALL
-    )
-
-
+# ---------------------------
+# Enhance Prompt
+# ---------------------------
 def enhance_prompt(prompt):
     return f"""
     2D animated illustration,
     clean flat design,
     explainer video style,
-    no text,
+    smooth shading,
+    professional presentation slide,
+    no text, no letters, no typography,
     {prompt}
     """
 
 
-def add_text(image_path, scene_number, caption):
+# ---------------------------
+# Generate Image
+# ---------------------------
+def generate_image(prompt, filename):
+    print(f"Generating image: {filename}")
+
+    image = pipe(
+        enhance_prompt(prompt),
+        height=512,
+        width=512,
+        num_inference_steps=25
+    ).images[0]
+
+    image.save(filename)
+
+
+# ---------------------------
+# Add Clean English Text
+# ---------------------------
+def add_clean_text(image_path, scene_number, caption_text):
     image = Image.open(image_path)
     draw = ImageDraw.Draw(image)
 
     try:
-        font = ImageFont.truetype("arial.ttf", 30)
+        font_title = ImageFont.truetype("arial.ttf", 40)
+        font_caption = ImageFont.truetype("arial.ttf", 28)
     except:
-        font = ImageFont.load_default()
+        font_title = ImageFont.load_default()
+        font_caption = ImageFont.load_default()
 
-    draw.rectangle([(0, 0), (512, 80)], fill="white")
-    draw.text((10, 10), f"Scene {scene_number}", fill="black", font=font)
-    draw.text((10, 40), caption[:80], fill="black", font=font)
+    width, height = image.size
+
+    # Draw white background box at top
+    draw.rectangle([(0, 0), (width, 90)], fill="white")
+
+    # Scene Title
+    title = f"Scene {scene_number}"
+    draw.text((20, 20), title, fill="black", font=font_title)
+
+    # Caption (short)
+    draw.text((20, 60), caption_text, fill="black", font=font_caption)
 
     image.save(image_path)
 
 
+# ---------------------------
+# MAIN
+# ---------------------------
 if __name__ == "__main__":
 
     os.makedirs("images", exist_ok=True)
 
-    path = "data/storyboard.txt"
+    storyboard_path = "data/storyboard.txt"
 
-    if not os.path.exists(path):
-        print("❌ storyboard.txt not found")
+    if not os.path.exists(storyboard_path):
+        print("ERROR: storyboard.txt not found.")
         exit()
 
-    with open(path, "r", encoding="utf-8") as f:
-        text = f.read()
+    with open(storyboard_path, "r", encoding="utf-8") as f:
+        storyboard = f.read()
 
-    visuals = extract_visuals(text)
-    narrations = extract_narrations(text)
+    visuals = extract_visual_prompts(storyboard)
+    narrations = re.findall(r"Narration:\s*(.+)", storyboard)
 
-    if len(visuals) == 0:
-        print("❌ No visual prompts found")
-        exit()
-
-    print(f"Generating {len(visuals)} images...\n")
+    print(f"Found {len(visuals)} scenes. Generating images...\n")
 
     for i, prompt in enumerate(visuals, start=1):
-        image = pipe(enhance_prompt(prompt), num_inference_steps=20).images[0]
         filename = f"images/scene{i}.png"
-        image.save(filename)
+
+        generate_image(prompt, filename)
 
         caption = narrations[i-1] if i-1 < len(narrations) else ""
-        add_text(filename, i, caption)
+        add_clean_text(filename, i, caption)
 
-    print("✅ Images generated!")
+    print("\n✅ All images generated successfully!")

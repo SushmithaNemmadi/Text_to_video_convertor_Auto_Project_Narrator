@@ -1,13 +1,47 @@
+import json
 import os
 import re
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+from langchain_ollama import OllamaLLM
 
-print("===== STORYBOARD GENERATOR (COLAB VERSION) =====")
+# ==============================
+# SETTINGS
+# ==============================
 
 RAG_OUTPUT_FILE = "rag_output.txt"
-DATA_FOLDER = "data"
 
+DATA_FOLDER = "data"
+STORYBOARD_FILE = os.path.join(DATA_FOLDER, "storyboard.txt")
+NARRATION_FILE = os.path.join(DATA_FOLDER, "narration.txt")
+VISUAL_FILE = os.path.join(DATA_FOLDER, "visual_prompts.txt")
+SCENES_JSON_FILE = os.path.join(DATA_FOLDER, "scenes.json")
+
+OLLAMA_MODEL = "llama3:8b"
+
+# ==============================
+# CREATE DATA FOLDER
+# ==============================
+
+def ensure_data_folder():
+    os.makedirs(DATA_FOLDER, exist_ok=True)
+
+def clear_old_outputs():
+    open(STORYBOARD_FILE, "w").close()
+    open(NARRATION_FILE, "w").close()
+    open(VISUAL_FILE, "w").close()
+    open(SCENES_JSON_FILE, "w").close()
+    print("✅ Old outputs cleared")
+
+# ==============================
+# LOAD MODEL
+# ==============================
+
+def load_llm():
+    print("Loading Ollama model...")
+    return OllamaLLM(model=OLLAMA_MODEL)
+
+# ==============================
+# READ RAG OUTPUT
+# ==============================
 
 def read_rag_output():
     if not os.path.exists(RAG_OUTPUT_FILE):
@@ -23,95 +57,162 @@ def read_rag_output():
 
     return content
 
+# ==============================
+# GENERATE CINEMATIC STORYBOARD
+# ==============================
 
-def load_llm():
-    model_name = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+def generate_storyboard(project_text, llm):
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name)
-
-    device = 0 if torch.cuda.is_available() else -1
-
-    pipe = pipeline(
-        task="text-generation",
-        model=model,
-        tokenizer=tokenizer,
-        device=device,
-        max_new_tokens=1500,
-        temperature=0.3,
-        do_sample=False
-    )
-
-    return pipe
-
-
-def generate_storyboard(project_text):
-
-    llm = load_llm()
+    print("Generating EXACTLY 15-scene CINEMATIC storyboard...")
 
     prompt = f"""
-Create EXACTLY 15 scenes storyboard.
+You are a professional cinematic storyboard creator and visual film director.
 
-Each scene must have:
+Generate EXACTLY 15 scenes in VALID JSON.
 
-Scene X — Title
-Narration:
-4-6 sentences explanation.
+STRICT RULES:
+- Output ONLY JSON array
+- No explanation
+- No markdown
+- Exactly 15 items
+- Each item must contain:
+    scene_number
+    scene_title
+    narration_prompt
+    visual_prompt
 
-Visual:
-Detailed image generation prompt.
+NARRATION RULES:
+- 3–4 emotionally engaging and technically clear sentences
+- Story-driven and immersive
+- Specific to the project
 
-Project:
+VISUAL RULES (VERY IMPORTANT):
+- Minimum 150 words per visual_prompt
+- Must be cinematic and realistic
+- Use artistic wording
+- Include:
+    • camera angle (wide shot, close-up, aerial shot, over-the-shoulder, tracking shot, etc.)
+    • lighting style (golden hour, neon glow, rim light, soft diffused light, dramatic shadows)
+    • depth of field
+    • lens type (35mm, 50mm, cinematic lens)
+    • realistic environment details
+    • textures and materials
+    • atmosphere (fog, dust particles, reflections, light rays)
+    • emotional mood
+- Must look like a professional movie frame or high-end photography
+- Ultra realistic
+- 4K resolution description
+- Cinematic composition
+
+FORMAT:
+
+[
+  {{
+    "scene_number": 1,
+    "scene_title": "",
+    "narration_prompt": "",
+    "visual_prompt": ""
+  }}
+]
+
+Project Content:
 {project_text}
 """
 
-    response = llm(prompt)[0]["generated_text"]
-    return response
+    response = llm.invoke(prompt)
+    return response.strip()
 
+# ==============================
+# EXTRACT JSON SAFELY
+# ==============================
 
-def save_files(storyboard):
+def extract_json(text):
+    match = re.search(r"\[\s*{.*}\s*\]", text, re.DOTALL)
+    if match:
+        return match.group(0)
+    return None
 
-    os.makedirs(DATA_FOLDER, exist_ok=True)
+# ==============================
+# SAVE OUTPUTS
+# ==============================
 
-    storyboard_path = os.path.join(DATA_FOLDER, "storyboard.txt")
-    narration_path = os.path.join(DATA_FOLDER, "narration.txt")
-    visual_path = os.path.join(DATA_FOLDER, "visual_prompts.txt")
+def save_outputs(raw_text):
 
-    with open(storyboard_path, "w", encoding="utf-8") as f:
-        f.write(storyboard)
+    json_text = extract_json(raw_text)
 
-    narrations = re.findall(
-        r"Narration:\s*(.*?)(?=\nVisual:)",
-        storyboard,
-        re.DOTALL
-    )
+    if not json_text:
+        print("❌ Could not extract JSON from model output.")
+        with open(STORYBOARD_FILE, "w", encoding="utf-8") as f:
+            f.write(raw_text)
+        return
 
-    with open(narration_path, "w", encoding="utf-8") as f:
-        for i, text in enumerate(narrations, start=1):
-            f.write(f"Scene {i}:\n{text.strip()}\n\n")
+    try:
+        scenes = json.loads(json_text)
 
-    visuals = re.findall(
-        r"Visual:\s*(.*?)(?=\nScene|\Z)",
-        storyboard,
-        re.DOTALL
-    )
+        if len(scenes) != 15:
+            print(f"⚠ Warning: Model returned {len(scenes)} scenes instead of 15")
 
-    with open(visual_path, "w", encoding="utf-8") as f:
-        for i, text in enumerate(visuals, start=1):
-            f.write(f"Scene {i}: {text.strip()}\n\n")
+        # Save formatted storyboard
+        with open(STORYBOARD_FILE, "w", encoding="utf-8") as f:
+            for scene in scenes:
+                f.write(f"Scene {scene['scene_number']}: {scene['scene_title']}\n\n")
+                f.write("Narration:\n")
+                f.write(scene["narration_prompt"] + "\n\n")
+                f.write("Visual:\n")
+                f.write(scene["visual_prompt"] + "\n\n")
+                f.write("=" * 80 + "\n\n")
 
-    print("✅ storyboard.txt, narration.txt, visual_prompts.txt saved")
+        # Save narration only
+        with open(NARRATION_FILE, "w", encoding="utf-8") as narr:
+            for scene in scenes:
+                narr.write(
+                    f"Scene {scene['scene_number']}: "
+                    f"{scene['narration_prompt']}\n\n"
+                )
 
+        # Save visual prompts only
+        with open(VISUAL_FILE, "w", encoding="utf-8") as visual:
+            for scene in scenes:
+                visual.write(
+                    f"Scene {scene['scene_number']}:\n"
+                    f"{scene['visual_prompt']}\n\n"
+                )
+
+        # Save structured JSON
+        with open(SCENES_JSON_FILE, "w", encoding="utf-8") as f:
+            json.dump(scenes, f, indent=4)
+
+        print("✅ storyboard.txt saved")
+        print("✅ narration.txt saved")
+        print("✅ visual_prompts.txt saved")
+        print("✅ scenes.json saved")
+
+    except Exception as e:
+        print("❌ JSON parsing failed.")
+        print("Error:", e)
+
+        with open(STORYBOARD_FILE, "w", encoding="utf-8") as f:
+            f.write(raw_text)
+
+# ==============================
+# MAIN
+# ==============================
 
 if __name__ == "__main__":
 
-    project_text = read_rag_output()
+    print("\n===== STORYBOARD GENERATOR (CINEMATIC REALISM VERSION) =====\n")
 
+    ensure_data_folder()
+    clear_old_outputs()
+
+    project_text = read_rag_output()
     if not project_text:
         exit()
 
-    result = generate_storyboard(project_text)
+    llm = load_llm()
 
-    print(result)
+    raw_output = generate_storyboard(project_text, llm)
 
-    save_files(result)
+    save_outputs(raw_output)
+
+    print("\n🎬 Cinematic storyboard generation complete!")
