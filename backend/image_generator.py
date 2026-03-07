@@ -1,113 +1,64 @@
+import requests
 import os
-import re
-import torch
-from diffusers import StableDiffusionPipeline
-from PIL import Image, ImageDraw, ImageFont
 
-print("Loading Animated Model (CPU mode)...")
-
-pipe = StableDiffusionPipeline.from_pretrained(
-    "runwayml/stable-diffusion-v1-5"
-)
-
-pipe = pipe.to("cpu")
+# CORRECT COLAB URL (IMPORTANT)
+COLAB_URL = "https://saylor-semiautonomous-adelyn.ngrok-free.dev/generate"
 
 
-# ---------------------------
-# Extract Visual Prompts
-# ---------------------------
-def extract_visual_prompts(storyboard_text):
-    visuals = re.findall(r"Visual:\s*(.+)", storyboard_text)
-    return visuals
+def read_prompts():
+
+    file_path = "data/visual_prompts.txt"
+
+    with open(file_path, "r") as f:
+        prompts = f.readlines()
+
+    # Remove empty lines and unwanted text
+    prompts = [p.strip() for p in prompts if p.strip() and "Scene" not in p and "**" not in p]
+
+    return prompts
 
 
-# ---------------------------
-# Enhance Prompt
-# ---------------------------
-def enhance_prompt(prompt):
-    return f"""
-    2D animated illustration,
-    clean flat design,
-    explainer video style,
-    smooth shading,
-    professional presentation slide,
-    no text, no letters, no typography,
-    {prompt}
-    """
+def clear_old_images(folder):
+    """Delete all old images before generating new ones"""
+    
+    if os.path.exists(folder):
+        for file in os.listdir(folder):
+            file_path = os.path.join(folder, file)
+            
+            # Remove only image files
+            if file.endswith(".png") or file.endswith(".jpg") or file.endswith(".jpeg"):
+                os.remove(file_path)
+                print("Deleted old image:", file_path)
 
 
-# ---------------------------
-# Generate Image
-# ---------------------------
-def generate_image(prompt, filename):
-    print(f"Generating image: {filename}")
+def generate_images():
 
-    image = pipe(
-        enhance_prompt(prompt),
-        height=512,
-        width=512,
-        num_inference_steps=25
-    ).images[0]
+    prompts = read_prompts()
 
-    image.save(filename)
+    # Save images in images folder
+    output_folder = "images"
 
+    os.makedirs(output_folder, exist_ok=True)
 
-# ---------------------------
-# Add Clean English Text
-# ---------------------------
-def add_clean_text(image_path, scene_number, caption_text):
-    image = Image.open(image_path)
-    draw = ImageDraw.Draw(image)
+    # 🔥 Remove old images first
+    clear_old_images(output_folder)
 
-    try:
-        font_title = ImageFont.truetype("arial.ttf", 40)
-        font_caption = ImageFont.truetype("arial.ttf", 28)
-    except:
-        font_title = ImageFont.load_default()
-        font_caption = ImageFont.load_default()
+    for i, prompt in enumerate(prompts):
 
-    width, height = image.size
+        print("Generating:", prompt)
 
-    # Draw white background box at top
-    draw.rectangle([(0, 0), (width, 90)], fill="white")
+        response = requests.post(
+            COLAB_URL,
+            json={"prompt": prompt}
+        )
 
-    # Scene Title
-    title = f"Scene {scene_number}"
-    draw.text((20, 20), title, fill="black", font=font_title)
+        image_path = os.path.join(output_folder, f"image_{i}.png")
 
-    # Caption (short)
-    draw.text((20, 60), caption_text, fill="black", font=font_caption)
+        with open(image_path, "wb") as f:
+            f.write(response.content)
 
-    image.save(image_path)
+        print("Saved:", image_path)
 
 
-# ---------------------------
-# MAIN
-# ---------------------------
 if __name__ == "__main__":
-
-    os.makedirs("images", exist_ok=True)
-
-    storyboard_path = "data/storyboard.txt"
-
-    if not os.path.exists(storyboard_path):
-        print("ERROR: storyboard.txt not found.")
-        exit()
-
-    with open(storyboard_path, "r", encoding="utf-8") as f:
-        storyboard = f.read()
-
-    visuals = extract_visual_prompts(storyboard)
-    narrations = re.findall(r"Narration:\s*(.+)", storyboard)
-
-    print(f"Found {len(visuals)} scenes. Generating images...\n")
-
-    for i, prompt in enumerate(visuals, start=1):
-        filename = f"images/scene{i}.png"
-
-        generate_image(prompt, filename)
-
-        caption = narrations[i-1] if i-1 < len(narrations) else ""
-        add_clean_text(filename, i, caption)
-
-    print("\n✅ All images generated successfully!")
+    generate_images()

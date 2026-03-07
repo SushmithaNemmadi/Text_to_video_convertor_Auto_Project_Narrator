@@ -1,35 +1,60 @@
 import os
-import re
-import pyttsx3
+from gtts import gTTS
 
-print("=== ProjVision Part 3: Scene-wise Audio Generator ===")
+print("=== Audio Generator (Stable Version) ===")
 
-os.makedirs("audio", exist_ok=True)
+data_file = "data/narration.txt"
+audio_folder = "audio"
 
-# Load narration file
-narration_path = "data/narration.txt"
+os.makedirs(audio_folder, exist_ok=True)
 
-if not os.path.exists(narration_path):
-    print("narration.txt not found!")
-    exit()
 
-with open(narration_path, "r", encoding="utf-8") as f:
-    content = f.read()
+# Delete old audio
+for file in os.listdir(audio_folder):
+    if file.endswith(".mp3") or file.endswith(".wav"):
+        os.remove(os.path.join(audio_folder,file))
 
-# Extract scene narrations
-scenes = re.findall(r"Scene \d+:\s*(.+)", content)
 
-engine = pyttsx3.init()
-engine.setProperty('rate', 170)
+# Read narration
+with open(data_file,"r",encoding="utf-8") as f:
+    lines=f.readlines()
 
-voices = engine.getProperty('voices')
-engine.setProperty('voice', voices[1].id)
 
-for i, text in enumerate(scenes, start=1):
-    filename = f"audio/scene{i}.mp3"
-    print(f"Generating {filename}")
-    engine.save_to_file(text, filename)
+# Split scenes
+scenes=[]
+current=""
 
-engine.runAndWait()
+for line in lines:
 
-print("\n✅ All scene audios generated successfully!")
+    line=line.strip()
+
+    if line.lower().startswith("scene"):
+
+        if current!="":
+            scenes.append(current)
+            current=""
+
+    else:
+
+        current+=" "+line
+
+if current!="":
+    scenes.append(current)
+
+
+print("Scenes:",len(scenes))
+
+
+# Generate audio
+for i,text in enumerate(scenes):
+
+    filename=f"audio/{i}.mp3"
+
+    print("Creating",filename)
+
+    tts=gTTS(text=text,lang="en")
+
+    tts.save(filename)
+
+
+print("✅ All Audio Generated")

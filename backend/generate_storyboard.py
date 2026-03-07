@@ -1,4 +1,3 @@
-import json
 import os
 import re
 from langchain_ollama import OllamaLLM
@@ -10,12 +9,14 @@ from langchain_ollama import OllamaLLM
 RAG_OUTPUT_FILE = "rag_output.txt"
 
 DATA_FOLDER = "data"
+
 STORYBOARD_FILE = os.path.join(DATA_FOLDER, "storyboard.txt")
 NARRATION_FILE = os.path.join(DATA_FOLDER, "narration.txt")
 VISUAL_FILE = os.path.join(DATA_FOLDER, "visual_prompts.txt")
-SCENES_JSON_FILE = os.path.join(DATA_FOLDER, "scenes.json")
 
-OLLAMA_MODEL = "llama3:8b"
+# Faster but still accurate
+OLLAMA_MODEL = "mistral:7b-instruct"
+
 
 # ==============================
 # CREATE DATA FOLDER
@@ -24,175 +25,178 @@ OLLAMA_MODEL = "llama3:8b"
 def ensure_data_folder():
     os.makedirs(DATA_FOLDER, exist_ok=True)
 
+
+# ==============================
+# CLEAR OLD OUTPUTS
+# ==============================
+
 def clear_old_outputs():
+
     open(STORYBOARD_FILE, "w").close()
     open(NARRATION_FILE, "w").close()
     open(VISUAL_FILE, "w").close()
-    open(SCENES_JSON_FILE, "w").close()
+
     print("✅ Old outputs cleared")
+
 
 # ==============================
 # LOAD MODEL
 # ==============================
 
 def load_llm():
-    print("Loading Ollama model...")
-    return OllamaLLM(model=OLLAMA_MODEL)
+
+    print("🔄 Loading Ollama model...\n")
+
+    return OllamaLLM(
+        model=OLLAMA_MODEL,
+        temperature=0,
+        num_predict=1500   # enough tokens for 15 scenes
+    )
+
 
 # ==============================
-# READ RAG OUTPUT
+# READ PROJECT INPUT
 # ==============================
 
-def read_rag_output():
+def read_project_input():
+
     if not os.path.exists(RAG_OUTPUT_FILE):
         print("❌ rag_output.txt not found")
         return None
 
     with open(RAG_OUTPUT_FILE, "r", encoding="utf-8") as f:
-        content = f.read().strip()
+        text = f.read().strip()
 
-    if not content:
+    if len(text) == 0:
         print("❌ rag_output.txt is empty")
         return None
 
-    return content
+    return text
+
 
 # ==============================
-# GENERATE CINEMATIC STORYBOARD
+# GENERATE STORYBOARD
 # ==============================
 
 def generate_storyboard(project_text, llm):
 
-    print("Generating EXACTLY 15-scene CINEMATIC storyboard...")
+    print("\n🎬 Generating Storyboard...\n")
 
     prompt = f"""
-You are a professional cinematic storyboard creator and visual film director.
 
-Generate EXACTLY 15 scenes in VALID JSON.
+You are an expert AI explainer video storyboard generator.
+
+Convert the project documentation below into a structured storyboard.
 
 STRICT RULES:
-- Output ONLY JSON array
-- No explanation
-- No markdown
-- Exactly 15 items
-- Each item must contain:
-    scene_number
-    scene_title
-    narration_prompt
-    visual_prompt
 
-NARRATION RULES:
-- 3–4 emotionally engaging and technically clear sentences
-- Story-driven and immersive
-- Specific to the project
+1. Generate EXACTLY 15 scenes.
+2. Each scene must explain a step of the system.
+3. Each narration must contain 3 sentences.
+4. Do not change the project topic.
+5. Do not add extra explanations.
 
-VISUAL RULES (VERY IMPORTANT):
-- Minimum 150 words per visual_prompt
-- Must be cinematic and realistic
-- Use artistic wording
-- Include:
-    • camera angle (wide shot, close-up, aerial shot, over-the-shoulder, tracking shot, etc.)
-    • lighting style (golden hour, neon glow, rim light, soft diffused light, dramatic shadows)
-    • depth of field
-    • lens type (35mm, 50mm, cinematic lens)
-    • realistic environment details
-    • textures and materials
-    • atmosphere (fog, dust particles, reflections, light rays)
-    • emotional mood
-- Must look like a professional movie frame or high-end photography
-- Ultra realistic
-- 4K resolution description
-- Cinematic composition
+FORMAT STRICTLY LIKE THIS:
 
-FORMAT:
+Scene 1
+Title: Short title
 
-[
-  {{
-    "scene_number": 1,
-    "scene_title": "",
-    "narration_prompt": "",
-    "visual_prompt": ""
-  }}
-]
+Narration:
+3 clear sentences explaining the concept.
 
-Project Content:
+Visual Prompt:
+A detailed realistic description for image generation.
+
+Continue the same structure until Scene 15.
+
+PROJECT DESCRIPTION:
 {project_text}
+
+Return ONLY the scenes.
 """
 
     response = llm.invoke(prompt)
-    return response.strip()
 
-# ==============================
-# EXTRACT JSON SAFELY
-# ==============================
+    return response
 
-def extract_json(text):
-    match = re.search(r"\[\s*{.*}\s*\]", text, re.DOTALL)
-    if match:
-        return match.group(0)
-    return None
 
 # ==============================
 # SAVE OUTPUTS
 # ==============================
 
-def save_outputs(raw_text):
+def save_outputs(text):
 
-    json_text = extract_json(raw_text)
+    print("💾 Saving outputs...\n")
 
-    if not json_text:
-        print("❌ Could not extract JSON from model output.")
-        with open(STORYBOARD_FILE, "w", encoding="utf-8") as f:
-            f.write(raw_text)
-        return
+    with open(STORYBOARD_FILE, "w", encoding="utf-8") as f:
+        f.write(text)
 
-    try:
-        scenes = json.loads(json_text)
+    print("✅ storyboard.txt saved")
 
-        if len(scenes) != 15:
-            print(f"⚠ Warning: Model returned {len(scenes)} scenes instead of 15")
 
-        # Save formatted storyboard
-        with open(STORYBOARD_FILE, "w", encoding="utf-8") as f:
-            for scene in scenes:
-                f.write(f"Scene {scene['scene_number']}: {scene['scene_title']}\n\n")
-                f.write("Narration:\n")
-                f.write(scene["narration_prompt"] + "\n\n")
-                f.write("Visual:\n")
-                f.write(scene["visual_prompt"] + "\n\n")
-                f.write("=" * 80 + "\n\n")
+    # --------------------------
+    # Extract scenes
+    # --------------------------
 
-        # Save narration only
-        with open(NARRATION_FILE, "w", encoding="utf-8") as narr:
-            for scene in scenes:
-                narr.write(
-                    f"Scene {scene['scene_number']}: "
-                    f"{scene['narration_prompt']}\n\n"
-                )
+    scenes = re.split(r"Scene\s+\d+", text)
+    scenes = [s.strip() for s in scenes if s.strip()]
 
-        # Save visual prompts only
-        with open(VISUAL_FILE, "w", encoding="utf-8") as visual:
-            for scene in scenes:
-                visual.write(
-                    f"Scene {scene['scene_number']}:\n"
-                    f"{scene['visual_prompt']}\n\n"
-                )
+    narrations = []
+    visuals = []
 
-        # Save structured JSON
-        with open(SCENES_JSON_FILE, "w", encoding="utf-8") as f:
-            json.dump(scenes, f, indent=4)
+    for scene in scenes:
 
-        print("✅ storyboard.txt saved")
-        print("✅ narration.txt saved")
-        print("✅ visual_prompts.txt saved")
-        print("✅ scenes.json saved")
+        narration_match = re.search(
+            r"Narration:\s*(.*?)\s*Visual Prompt:",
+            scene,
+            re.DOTALL
+        )
 
-    except Exception as e:
-        print("❌ JSON parsing failed.")
-        print("Error:", e)
+        visual_match = re.search(
+            r"Visual Prompt:\s*(.*)",
+            scene,
+            re.DOTALL
+        )
 
-        with open(STORYBOARD_FILE, "w", encoding="utf-8") as f:
-            f.write(raw_text)
+        if narration_match:
+            narrations.append(narration_match.group(1).strip())
+
+        if visual_match:
+            visuals.append(visual_match.group(1).strip())
+
+
+    # --------------------------
+    # SAVE NARRATIONS
+    # --------------------------
+
+    with open(NARRATION_FILE, "w", encoding="utf-8") as f:
+
+        for i, n in enumerate(narrations, 1):
+            f.write(f"Scene {i}\n\n")
+            f.write(n)
+            f.write("\n\n")
+
+    print("✅ narration.txt saved")
+
+
+    # --------------------------
+    # SAVE VISUAL PROMPTS
+    # --------------------------
+
+    with open(VISUAL_FILE, "w", encoding="utf-8") as f:
+
+        for i, v in enumerate(visuals, 1):
+            f.write(f"Scene {i}\n\n")
+            f.write(v)
+            f.write("\n\n")
+
+    print("✅ visual_prompts.txt saved")
+
+
+    print("\n📊 Summary:")
+    print("Narrations:", len(narrations))
+    print("Visual Prompts:", len(visuals))
+
 
 # ==============================
 # MAIN
@@ -200,19 +204,24 @@ def save_outputs(raw_text):
 
 if __name__ == "__main__":
 
-    print("\n===== STORYBOARD GENERATOR (CINEMATIC REALISM VERSION) =====\n")
+    print("\n==============================")
+    print("🎬 AI STORYBOARD GENERATOR")
+    print("==============================\n")
 
     ensure_data_folder()
+
     clear_old_outputs()
 
-    project_text = read_rag_output()
-    if not project_text:
+    project_text = read_project_input()
+
+    if project_text is None:
         exit()
 
     llm = load_llm()
 
-    raw_output = generate_storyboard(project_text, llm)
+    storyboard = generate_storyboard(project_text, llm)
 
-    save_outputs(raw_output)
+    save_outputs(storyboard)
 
-    print("\n🎬 Cinematic storyboard generation complete!")
+    print("\n🎬 STORYBOARD COMPLETE!")
+    print("📁 Check folder: data/")
