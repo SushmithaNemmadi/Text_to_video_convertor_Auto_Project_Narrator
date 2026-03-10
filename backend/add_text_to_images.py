@@ -57,4 +57,4 @@ for i, file in enumerate(sorted(os.listdir(IMAGE_FOLDER))):
 
         print("Saved labeled image:", output_path)
 
-print("✅ All images updated with readable text")
+print(" All images updated with readable text")

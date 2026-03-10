@@ -124,9 +124,9 @@ def save_files(storyboard):
         for line in visuals:
             f.write(line + "\n")
 
-    print("\n✅ storyboard.txt saved")
-    print("✅ narration.txt saved")
-    print("✅ visual_prompts.txt saved")
+    print("\nstoryboard.txt saved")
+    print("narration.txt saved")
+    print("visual_prompts.txt saved")
 
 
 if __name__ == "__main__":

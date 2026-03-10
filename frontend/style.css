@@ -1,0 +1,249 @@
+/* ===============================
+BASIC PAGE STYLE (YOUR ORIGINAL)
+=============================== */
+
+body{
+    font-family: Arial, sans-serif;
+    background:#f4f6fb;
+    text-align:center;
+}
+
+.container{
+    width:700px;
+    margin:auto;
+    margin-top:60px;
+    background:white;
+    padding:30px;
+    border-radius:10px;
+    box-shadow:0px 0px 10px rgba(0,0,0,0.2);
+}
+
+input{
+    width:90%;
+    padding:10px;
+    margin:10px;
+    border-radius:5px;
+    border:1px solid #ccc;
+}
+
+textarea{
+    width:90%;
+    height:120px;
+    padding:10px;
+    margin:10px;
+    border-radius:5px;
+    border:1px solid #ccc;
+}
+
+button{
+    padding:12px 25px;
+    background:#4CAF50;
+    color:white;
+    border:none;
+    font-size:16px;
+    border-radius:5px;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#45a049;
+}
+
+#status{
+    margin-top:20px;
+    font-weight:bold;
+}
+
+video{
+    margin-top:20px;
+}
+
+
+/* ===============================
+ENHANCED MODERN UI
+=============================== */
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+}
+
+.glass-header {
+    background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.1));
+    backdrop-filter: blur(20px);
+}
+
+.gradient-text {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+
+/* ===============================
+BUTTON STYLE
+=============================== */
+
+.btn-primary{
+    background: linear-gradient(135deg,#667eea,#764ba2);
+    color:white;
+    padding:14px 28px;
+    border-radius:10px;
+    font-weight:bold;
+    border:none;
+    cursor:pointer;
+    transition:0.3s;
+}
+
+.btn-primary:hover{
+    transform:translateY(-2px);
+    box-shadow:0px 8px 20px rgba(0,0,0,0.2);
+}
+
+
+/* ===============================
+VIDEO PLAYER
+=============================== */
+
+.video-container{
+    background:#1f2937;
+    border-radius:10px;
+    padding:10px;
+    box-shadow:0px 10px 30px rgba(0,0,0,0.3);
+}
+
+#videoWrapper{
+    transition:transform 0.3s;
+}
+
+#subtitleOverlay{
+    background:rgba(0,0,0,0.75);
+    border-radius:6px;
+    padding:8px 14px;
+    color:white;
+    font-size:14px;
+}
+
+
+/* ===============================
+STEP INDICATORS
+=============================== */
+
+.step-indicator{
+    transition:0.3s;
+}
+
+.step-indicator.active{
+    background:#667eea;
+    color:white;
+}
+
+.step-indicator.completed{
+    background:#10b981;
+    color:white;
+}
+
+
+/* ===============================
+NOTIFICATIONS
+=============================== */
+
+.notification{
+    position:fixed;
+    top:20px;
+    right:20px;
+    padding:15px 20px;
+    border-radius:6px;
+    color:white;
+    font-size:14px;
+    box-shadow:0px 5px 20px rgba(0,0,0,0.2);
+}
+
+.notification.success{ background:#10b981; }
+.notification.error{ background:#ef4444; }
+.notification.warning{ background:#f59e0b; }
+.notification.info{ background:#3b82f6; }
+
+
+/* ===============================
+MODAL
+=============================== */
+
+.modal-overlay{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    background:rgba(0,0,0,0.5);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+.modal-content{
+    background:white;
+    padding:25px;
+    border-radius:10px;
+    max-width:600px;
+    width:90%;
+}
+
+.report-content{
+    background:#f3f4f6;
+    padding:15px;
+    border-radius:6px;
+    font-family:monospace;
+}
+
+
+/* ===============================
+ANIMATIONS
+=============================== */
+
+.fade-in-up{
+    animation:fadeUp 0.6s ease-out;
+}
+
+@keyframes fadeUp{
+    from{
+        opacity:0;
+        transform:translateY(30px);
+    }
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+}
+
+
+/* ===============================
+LOADING ANIMATION
+=============================== */
+
+@keyframes pulse{
+    0%,100%{opacity:1;}
+    50%{opacity:0.5;}
+}
+
+.loading-pulse{
+    animation:pulse 2s infinite;
+}
+
+
+/* ===============================
+RESPONSIVE
+=============================== */
+
+@media(max-width:768px){
+
+.container{
+    width:95%;
+}
+
+video{
+    width:100%;
+}
+
+}

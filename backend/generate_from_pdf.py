@@ -123,7 +123,7 @@ def process_all_projects(titles):
     results = existing_results.copy()
 
     if not remaining_titles:
-        print("All projects already generated ✅")
+        print("All projects already generated")
         return results
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
