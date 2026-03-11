@@ -8,16 +8,17 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-VIDEO_PATH = "final_video.mp4"
-DOC_PATH = "project_documentation.docx"
-
 jobs = {}
 lock = threading.Lock()
 
+BASE_DIR = os.getcwd()
+OUTPUT_VIDEO = os.path.join(BASE_DIR, "final_video.mp4")
+OUTPUT_DOC = os.path.join(BASE_DIR, "project_documentation.docx")
 
-# ==========================
-# GENERATE VIDEO
-# ==========================
+
+# -------------------------------
+# GENERATE JOB
+# -------------------------------
 
 @app.route("/api/generate", methods=["POST"])
 def generate():
@@ -30,119 +31,148 @@ def generate():
     if not title and not description:
         return jsonify({"error": "Enter title or description"}), 400
 
-    query = f"{title} {description}"
+    query = f"{title} {description}".strip()
 
     job_id = str(uuid.uuid4())
 
-    job_data = {
-        "id": job_id,
-        "status": "Starting...",
-        "progress": 0
-    }
-
     with lock:
-        jobs[job_id] = job_data
+        jobs[job_id] = {
+            "id": job_id,
+            "status": "Starting generation...",
+            "progress": 5,
+            "video": None,
+            "doc": None
+        }
 
-    thread = threading.Thread(target=run_job, args=(job_id, query))
+    thread = threading.Thread(target=run_job, args=(job_id, query), daemon=True)
     thread.start()
 
-    return jsonify({
-        "job_id": job_id
-    })
+    return jsonify({"job_id": job_id})
 
 
-# ==========================
+# -------------------------------
 # RUN PIPELINE
-# ==========================
+# -------------------------------
 
 def run_job(job_id, query):
 
     process = subprocess.Popen(
-        ["python", "backend/run_pipeline.py", query],
+        ["python", "-u", "backend/run_pipeline.py", query],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
-        bufsize=1
     )
 
     for line in process.stdout:
 
         line = line.strip()
-        print(line)
+        print("PIPELINE:", line, flush=True)
 
         if "STAGE: RAG_START" in line:
-            update_job(job_id, "Generating RAG output...", 10)
+            update_job(job_id, "Generating project documentation...", 10)
 
         elif "STAGE: STORYBOARD" in line:
-            update_job(job_id, "Generating storyboard...", 30)
+            update_job(job_id, "Creating storyboard...", 30)
 
         elif "STAGE: IMAGES" in line:
             update_job(job_id, "Generating images...", 50)
 
         elif "STAGE: AUDIO" in line:
-            update_job(job_id, "Generating audio...", 70)
+            update_job(job_id, "Generating narration audio...", 70)
 
         elif "STAGE: VIDEO" in line:
-            update_job(job_id, "Generating video...", 90)
+            update_job(job_id, "Rendering final video...", 90)
 
         elif "STAGE: COMPLETE" in line:
+
+            with lock:
+                jobs[job_id]["video"] = f"/api/video/{job_id}"
+                jobs[job_id]["doc"] = f"/api/document/{job_id}"
+
             update_job(job_id, "Completed", 100)
 
     process.wait()
 
 
+# -------------------------------
+# UPDATE JOB
+# -------------------------------
+
 def update_job(job_id, status, progress):
 
     with lock:
-        if job_id in jobs:
-            jobs[job_id]["status"] = status
-            jobs[job_id]["progress"] = progress
+
+        if job_id not in jobs:
+            return
+
+        current = jobs[job_id]["progress"]
+
+        if progress < current:
+            progress = current
+
+        jobs[job_id]["status"] = status
+        jobs[job_id]["progress"] = progress
 
 
-# ==========================
-# STATUS
-# ==========================
+# -------------------------------
+# STATUS API
+# -------------------------------
 
 @app.route("/api/status/<job_id>")
 def status(job_id):
 
-    job = jobs.get(job_id)
+    with lock:
+        job = jobs.get(job_id)
 
-    if not job:
-        return jsonify({"error": "Job not found"}), 404
+    if job is None:
+        return jsonify({
+            "status": "Initializing...",
+            "progress": 0
+        })
 
-    return jsonify(job)
+    return jsonify({
+        "status": job["status"],
+        "progress": job["progress"],
+        "video": job["video"],
+        "doc": job["doc"]
+    })
 
 
-# ==========================
-# VIDEO
-# ==========================
+# -------------------------------
+# VIDEO API
+# -------------------------------
 
 @app.route("/api/video/<job_id>")
 def video(job_id):
 
-    if not os.path.exists(VIDEO_PATH):
-        return jsonify({"error": "Video not found"}), 404
+    if not os.path.exists(OUTPUT_VIDEO):
+        return jsonify({"error": "Video not ready"}), 404
 
-    return send_file(VIDEO_PATH, mimetype="video/mp4")
+    return send_file(OUTPUT_VIDEO, mimetype="video/mp4")
 
 
-# ==========================
-# DOCUMENT
-# ==========================
+# -------------------------------
+# DOCUMENT API
+# -------------------------------
 
 @app.route("/api/document/<job_id>")
 def document(job_id):
 
-    if not os.path.exists(DOC_PATH):
-        return jsonify({"error": "Document not found"}), 404
+    if not os.path.exists(OUTPUT_DOC):
+        return jsonify({"error": "Document not ready"}), 404
 
-    return send_file(DOC_PATH, as_attachment=True)
+    return send_file(OUTPUT_DOC, as_attachment=True)
 
 
-# ==========================
-# SERVER
-# ==========================
+# -------------------------------
+# RUN SERVER
+# -------------------------------
 
 if __name__ == "__main__":
-    app.run(debug=True)
+
+    app.run(
+        host="0.0.0.0",
+        port=5000,
+        debug=True,
+        threaded=True
+    )

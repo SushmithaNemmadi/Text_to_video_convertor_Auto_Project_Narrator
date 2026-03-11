@@ -1,206 +1,94 @@
 const API = "http://localhost:5000";
 
 let currentJob = null;
-let progressTimer = null;
+let lastProgress = 0;
 
-/* ==========================
-GENERATE VIDEO
-========================== */
+document.addEventListener("DOMContentLoaded", () => {
 
-async function generateVideo() {
+    const form = document.getElementById("projectForm");
 
-    const topic = document.getElementById("topic").value
-    const description = document.getElementById("description").value
+    form.addEventListener("submit", async (e) => {
 
-    if (!topic && !description) {
-        alert("Please enter project topic or description")
-        return
-    }
+        e.preventDefault();
 
-    document.getElementById("status").innerText = "🚀 Starting generation..."
+        const topic = document.getElementById("projectTitle").value;
+        const description = document.getElementById("projectDescription").value;
 
-    const response = await fetch(API + "/api/generate", {
+        if (!topic && !description) {
+            alert("Enter title or description");
+            return;
+        }
 
-        method: "POST",
+        document.getElementById("status").innerText = "🚀 Starting generation...";
 
-        headers: {
-            "Content-Type": "application/json"
-        },
+        const bar = document.getElementById("progressBar");
+        bar.style.width = "5%";
 
-        body: JSON.stringify({
-            project_topic: topic,
-            project_description: description
-        })
+        lastProgress = 5;
 
-    })
+        const response = await fetch(API + "/api/generate", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                project_topic: topic,
+                project_description: description
+            })
+        });
 
-    const data = await response.json()
+        const data = await response.json();
+        currentJob = data.job_id;
 
-    currentJob = data.job_id
+        checkStatus(currentJob);
 
-    checkStatus(currentJob)
+    });
 
-}
+});
 
-
-/* ==========================
-CHECK STATUS
-========================== */
 
 async function checkStatus(jobId) {
 
-    const response = await fetch(API + "/api/status/" + jobId)
+    const response = await fetch(API + "/api/status/" + jobId);
+    const data = await response.json();
 
-    const data = await response.json()
+    const progress = parseInt(data.progress);
+    const bar = document.getElementById("progressBar");
+
+    if (progress < lastProgress) {
+        setTimeout(() => checkStatus(jobId), 2000);
+        return;
+    }
+
+    lastProgress = progress;
 
     document.getElementById("status").innerText =
-        "Status: " + data.status + " (" + data.progress + "%)"
+        data.status + " (" + progress + "%)";
 
-    if (data.status != "completed") {
+    bar.style.width = progress + "%";
 
-        progressTimer = setTimeout(() => checkStatus(jobId), 2000)
+    if (progress < 100) {
 
-    }
+        setTimeout(() => checkStatus(jobId), 2000);
 
-    else {
-
-        document.getElementById("status").innerText = "✅ Video Ready"
-
-        const videoUrl = API + "/api/video/" + jobId
-
-        const videoPlayer = document.getElementById("videoPlayer")
-
-        videoPlayer.src = videoUrl
-
-        videoPlayer.load()
-
-        const docUrl = API + "/api/document/" + jobId
-
-        document.getElementById("downloadDoc").href = docUrl
-
-        showNotification("Video generated successfully!", "success")
-    }
-
-}
-
-
-/* ==========================
-VIDEO PLAYER CONTROLS
-========================== */
-
-function togglePlay() {
-
-    const video = document.getElementById("videoPlayer")
-
-    if (video.paused) {
-        video.play()
     } else {
-        video.pause()
+
+        document.getElementById("status").innerText = "✅ Video Ready";
+
+        if (data.video) {
+
+            const videoPlayer = document.getElementById("videoPlayer");
+
+            videoPlayer.src = API + data.video;
+            videoPlayer.load();
+            videoPlayer.style.display = "block";
+
+            document.getElementById("downloadVideo").href =
+                API + data.video;
+        }
+
+        if (data.doc) {
+
+            document.getElementById("downloadDoc").href =
+                API + data.doc;
+        }
     }
-
-}
-
-function changeVolume(value) {
-
-    const video = document.getElementById("videoPlayer")
-
-    video.volume = value / 100
-
-}
-
-function seekVideo(value) {
-
-    const video = document.getElementById("videoPlayer")
-
-    if (!video.duration) return
-
-    const seekTime = (value / 100) * video.duration
-
-    video.currentTime = seekTime
-
-}
-
-function toggleFullscreen() {
-
-    const video = document.getElementById("videoPlayer")
-
-    if (!document.fullscreenElement) {
-        video.requestFullscreen()
-    } else {
-        document.exitFullscreen()
-    }
-
-}
-
-
-/* ==========================
-NOTIFICATION SYSTEM
-========================== */
-
-function showNotification(message, type = "info") {
-
-    let container = document.getElementById("notificationContainer")
-
-    if (!container) return
-
-    const div = document.createElement("div")
-
-    div.style.background = "#333"
-    div.style.color = "white"
-    div.style.padding = "12px"
-    div.style.margin = "10px"
-    div.style.borderRadius = "6px"
-
-    div.innerText = message
-
-    container.appendChild(div)
-
-    setTimeout(() => {
-        div.remove()
-    }, 4000)
-
-}
-
-
-/* ==========================
-DOWNLOAD VIDEO
-========================== */
-
-function downloadVideo() {
-
-    if (!currentJob) return
-
-    window.open(API + "/api/video/" + currentJob)
-
-}
-
-
-/* ==========================
-RESET FORM
-========================== */
-
-function resetForm() {
-
-    document.getElementById("topic").value = ""
-    document.getElementById("description").value = ""
-
-    document.getElementById("videoPlayer").src = ""
-
-    document.getElementById("status").innerText = ""
-
-}
-
-
-/* ==========================
-CANCEL GENERATION
-========================== */
-
-function cancelGeneration() {
-
-    if (progressTimer) {
-        clearTimeout(progressTimer)
-    }
-
-    document.getElementById("status").innerText = "❌ Generation cancelled"
-
 }

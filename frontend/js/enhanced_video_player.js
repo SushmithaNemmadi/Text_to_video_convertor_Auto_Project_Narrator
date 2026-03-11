@@ -1,81 +1,58 @@
-const API = "http://localhost:5000";
+const videoPlayer = document.getElementById("videoPlayer");
+const statusText = document.getElementById("status");
 
-let currentJob = null;
+if(videoPlayer){
 
+    // When video starts loading
+    videoPlayer.addEventListener("loadstart", function(){
 
-/* GENERATE VIDEO */
+        console.log("Video loading...");
+        if(statusText){
+            statusText.innerText = "🎬 Loading generated video...";
+        }
 
-document.getElementById("projectForm").addEventListener("submit", async function(e){
+    });
 
-    e.preventDefault();
+    // When video metadata is ready
+    videoPlayer.addEventListener("loadedmetadata", function(){
 
-    const topic = document.getElementById("projectTitle").value
-    const description = document.getElementById("projectDescription").value
+        console.log("Video metadata loaded");
 
-    if(!topic && !description){
-        alert("Enter title or description")
-        return
-    }
+    });
 
-    document.getElementById("status").innerText =
-    "🚀 Starting generation..."
+    // When video can start playing
+    videoPlayer.addEventListener("canplay", function(){
 
-    const response = await fetch(API + "/api/generate",{
+        console.log("Video ready to play");
 
-        method:"POST",
+        if(statusText){
+            statusText.innerText = "✅ Video Ready";
+        }
 
-        headers:{
-            "Content-Type":"application/json"
-        },
+    });
 
-        body:JSON.stringify({
-            project_topic:topic,
-            project_description:description
-        })
+    // If video fails
+    videoPlayer.addEventListener("error", function(){
 
-    })
+        console.error("Video failed to load");
 
-    const data = await response.json()
+        if(statusText){
+            statusText.innerText = "❌ Failed to load video";
+        }
 
-    currentJob = data.job_id
+    });
 
-    checkStatus(currentJob)
+    // Optional: autoplay when video appears
+    videoPlayer.addEventListener("loadeddata", function(){
 
-})
+        setTimeout(() => {
 
+            videoPlayer.play().catch(() => {
+                console.log("Autoplay blocked by browser");
+            });
 
-/* CHECK STATUS */
+        }, 500);
 
-async function checkStatus(jobId){
-
-    const response = await fetch(API + "/api/status/"+jobId)
-
-    const data = await response.json()
-
-    document.getElementById("status").innerText =
-    data.status + " (" + data.progress + "%)"
-
-    if(data.progress < 100){
-
-        setTimeout(()=>checkStatus(jobId),2000)
-
-    }
-
-    else{
-
-        document.getElementById("status").innerText =
-        "✅ Video Ready"
-
-        const videoUrl = API + "/api/video/"+jobId
-
-        document.getElementById("videoPlayer").src = videoUrl
-
-        document.getElementById("downloadVideo").href = videoUrl
-
-        const docUrl = API + "/api/document/"+jobId
-
-        document.getElementById("downloadDoc").href = docUrl
-
-    }
+    });
 
 }
