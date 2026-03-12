@@ -1,41 +1,14 @@
 import os
-import re
 from langchain_ollama import OllamaLLM
 
 # ==============================
 # SETTINGS
 # ==============================
 
-RAG_OUTPUT_FILE = "rag_output.txt"
+INPUT_FILE = "rag_output.txt"
+OUTPUT_FILE = "visual_prompts.txt"
 
-DATA_FOLDER = "data"
-
-STORYBOARD_FILE = os.path.join(DATA_FOLDER, "storyboard.txt")
-NARRATION_FILE = os.path.join(DATA_FOLDER, "narration.txt")
-VISUAL_FILE = os.path.join(DATA_FOLDER, "visual_prompts.txt")
-
-OLLAMA_MODEL = "llama3:8b"
-
-
-# ==============================
-# CREATE DATA FOLDER
-# ==============================
-
-def ensure_data_folder():
-    os.makedirs(DATA_FOLDER, exist_ok=True)
-
-
-# ==============================
-# CLEAR OLD OUTPUTS
-# ==============================
-
-def clear_old_outputs():
-
-    open(STORYBOARD_FILE, "w").close()
-    open(NARRATION_FILE, "w").close()
-    open(VISUAL_FILE, "w").close()
-
-    print("Old outputs cleared")
+OLLAMA_MODEL = "phi3:mini"
 
 
 # ==============================
@@ -44,186 +17,86 @@ def clear_old_outputs():
 
 def load_llm():
 
-    print("Loading Ollama model...\n")
+    print("Loading Ollama model...")
 
     return OllamaLLM(
         model=OLLAMA_MODEL,
-        temperature=0
+        temperature=0,
+        num_predict=60
     )
 
 
 # ==============================
-# READ PROJECT INPUT
+# READ PROJECT TEXT
 # ==============================
 
-def read_project_input():
+def read_input():
 
-    if not os.path.exists(RAG_OUTPUT_FILE):
+    if not os.path.exists(INPUT_FILE):
         print("rag_output.txt not found")
         return None
 
-    with open(RAG_OUTPUT_FILE, "r", encoding="utf-8") as f:
-        text = f.read().strip()
-
-    if len(text) == 0:
-        print("rag_output.txt is empty")
-        return None
-
-    return text
+    with open(INPUT_FILE, "r", encoding="utf-8") as f:
+        return f.read().strip()
 
 
 # ==============================
-# GENERATE STORYBOARD
+# GENERATE ONE VISUAL PROMPT
 # ==============================
 
-def generate_storyboard(project_text, llm):
-
-    print("\nGenerating Storyboard...\n")
+def generate_visual_prompt(scene_number, project_text, llm):
 
     prompt = f"""
+Create ONE visual prompt for an educational YouTube tech explainer video.
 
-You are an expert AI video storyboard generator.
-
-Convert the project description into a storyboard for an educational explainer video.
-
-STRICT RULES
-
-1. Generate EXACTLY 15 scenes.
-2. Each scene must explain the system step-by-step.
-3. Narration must contain 3-4 sentences.
-4. Do NOT change the project topic.
-5. Do NOT invent unrelated systems.
-
-VISUAL PROMPT RULES (VERY IMPORTANT)
-
-Images must contain NO TEXT.
-
-Do NOT include:
-- letters
-- numbers
-- captions
-- UI text
-- dashboards
-- charts
-- diagrams with labels
-- titles
-- subtitles
-
-Images must be:
-- cinematic
-- realistic
-- detailed
-- visually descriptive
-- suitable for AI image generation
-
-FORMAT EXACTLY LIKE THIS:
-
-Scene 1
-Title: Short title
-
-Narration:
-3-4 sentences explaining the concept.
-
-Visual Prompt:
-A cinematic realistic scene with NO text, NO letters, NO numbers.
-
-Continue the same structure until Scene 15.
-
-PROJECT DESCRIPTION:
+Project:
 {project_text}
 
-Return ONLY the scenes.
+Scene number: {scene_number}
 
+RULES
+- The image must explain the system visually
+- Use system diagrams, workflows, or UI screens
+- Avoid cinematic scenes or people typing
+
+FORMAT
+Visual Prompt:
 """
 
-    response = llm.invoke(prompt)
+    result = llm.invoke(prompt)
 
-    return response
-
-
-# ==============================
-# EXTRACT DATA
-# ==============================
-
-def extract_data(storyboard):
-
-    scenes = re.split(r"Scene\s*\d+", storyboard)
-
-    narrations = []
-    visuals = []
-
-    for scene in scenes:
-
-        if "Narration" not in scene:
-            continue
-
-        narration_match = re.search(
-            r"Narration:\s*(.*?)\s*Visual Prompt:",
-            scene,
-            re.DOTALL | re.IGNORECASE
-        )
-
-        visual_match = re.search(
-            r"Visual Prompt:\s*(.*)",
-            scene,
-            re.DOTALL | re.IGNORECASE
-        )
-
-        if narration_match:
-            narrations.append(narration_match.group(1).strip())
-
-        if visual_match:
-            visuals.append(visual_match.group(1).strip())
-
-    return narrations, visuals
+    return f"Scene {scene_number}\n{result.strip()}\n"
 
 
 # ==============================
-# SAVE OUTPUTS
+# GENERATE 10 PROMPTS
 # ==============================
 
-def save_outputs(storyboard):
+def generate_prompts(project_text, llm):
 
-    print("Saving outputs...\n")
+    prompts = ""
 
-    with open(STORYBOARD_FILE, "w", encoding="utf-8") as f:
-        f.write(storyboard)
+    for i in range(1, 11):
 
-    print("storyboard.txt saved")
+        print(f"Generating visual prompt {i}")
 
-    narrations, visuals = extract_data(storyboard)
+        scene_prompt = generate_visual_prompt(i, project_text, llm)
 
-    if len(narrations) == 0:
-        print("Narrations not detected. Check LLM format.")
+        prompts += scene_prompt + "\n"
 
-    if len(visuals) == 0:
-        print("Visual prompts not detected. Check LLM format.")
+    return prompts
 
-    # SAVE NARRATIONS
-    with open(NARRATION_FILE, "w", encoding="utf-8") as f:
 
-        for i, n in enumerate(narrations, 1):
+# ==============================
+# SAVE OUTPUT
+# ==============================
 
-            f.write(f"Scene {i}\n\n")
-            f.write(n)
-            f.write("\n\n")
+def save_output(prompts):
 
-    print("narration.txt saved")
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        f.write(prompts)
 
-    # SAVE VISUAL PROMPTS
-    with open(VISUAL_FILE, "w", encoding="utf-8") as f:
-
-        for i, v in enumerate(visuals, 1):
-
-            f.write(f"Scene {i}\n\n")
-            f.write(v)
-            f.write("\n\n")
-
-    print("visual_prompts.txt saved")
-
-    print("\nSummary:")
-    print("Narrations:", len(narrations))
-    print("Visual Prompts:", len(visuals))
+    print("Saved visual prompts to", OUTPUT_FILE)
 
 
 # ==============================
@@ -232,24 +105,17 @@ def save_outputs(storyboard):
 
 if __name__ == "__main__":
 
-    print("\n==============================")
-    print("AI STORYBOARD GENERATOR")
-    print("==============================\n")
+    print("\nFAST VISUAL PROMPT GENERATOR\n")
 
-    ensure_data_folder()
+    text = read_input()
 
-    clear_old_outputs()
-
-    project_text = read_project_input()
-
-    if project_text is None:
+    if text is None:
         exit()
 
     llm = load_llm()
 
-    storyboard = generate_storyboard(project_text, llm)
+    prompts = generate_prompts(text, llm)
 
-    save_outputs(storyboard)
+    save_output(prompts)
 
-    print("\nSTORYBOARD COMPLETE!")
-    print("Check folder: data/")
+    print("\nFinished generating 10 visual prompts.")

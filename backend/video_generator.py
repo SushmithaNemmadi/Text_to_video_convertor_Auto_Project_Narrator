@@ -60,7 +60,7 @@ print("Images Found:", len(image_files))
 print("Audio Found:", len(audio_files))
 
 # =========================
-# LOAD SUBTITLES (IGNORE SCENE TITLES)
+# LOAD CLEAN SUBTITLES
 # =========================
 
 subtitles = []
@@ -76,17 +76,24 @@ if os.path.exists(narration_file):
             if not line:
                 continue
 
+            # ignore scene titles
             if line.lower().startswith("scene"):
                 continue
 
-            subtitles.append(line)
+            # remove ** symbols
+            line = line.replace("*", "")
 
-subtitles = subtitles[:len(audio_files)]
+            line = line.strip()
+
+            if line:
+                subtitles.append(line)
+
+subtitles = subtitles[:len(image_files)]
 
 print("Subtitles Loaded:", len(subtitles))
 
 # =========================
-# FONT (SMALLER FOR CLEAR VISIBILITY)
+# FONT
 # =========================
 
 font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 20)
@@ -100,10 +107,8 @@ def create_subtitle(text):
     width = 1280
     height = 110
 
-    # Wrap long sentences
     text = "\n".join(textwrap.wrap(text, width=60))
 
-    # Light transparent background
     img = Image.new("RGBA", (width, height), (0,0,0,120))
     draw = ImageDraw.Draw(img)
 
@@ -133,34 +138,66 @@ def create_subtitle(text):
 
 clips = []
 
-for i,(img,aud) in enumerate(zip(image_files,audio_files)):
+total_images = len(image_files)
+total_audio = len(audio_files)
 
-    print("Combining:", img, "+", aud)
+for i in range(total_images):
 
+    img = image_files[i]
     image_path = os.path.join(images_folder,img)
-    audio_path = os.path.join(audio_folder,aud)
 
-    audio_clip = AudioFileClip(audio_path)
+    print("\nProcessing:", img)
 
-    print("Audio Duration:", audio_clip.duration)
+    # ----------------------
+    # CASE 1: IMAGE + AUDIO
+    # ----------------------
+    if i < total_audio:
 
-    image_clip = ImageClip(image_path)
-    image_clip = image_clip.set_duration(audio_clip.duration)
-    image_clip = image_clip.resize((1280,720))
-    image_clip = image_clip.set_audio(audio_clip)
+        aud = audio_files[i]
+        audio_path = os.path.join(audio_folder,aud)
 
-    text = subtitles[i] if i < len(subtitles) else ""
+        print("Combining:", img, "+", aud)
 
-    subtitle_img = create_subtitle(text)
+        audio_clip = AudioFileClip(audio_path)
 
-    subtitle_clip = ImageClip(subtitle_img)
-    subtitle_clip = subtitle_clip.set_duration(audio_clip.duration)
+        image_clip = ImageClip(image_path)
+        image_clip = image_clip.set_duration(audio_clip.duration)
+        image_clip = image_clip.resize((1280,720))
+        image_clip = image_clip.set_audio(audio_clip)
 
-    # Position subtitles above video controls
-    subtitle_clip = subtitle_clip.set_position(("center", 580))
+        text = subtitles[i] if i < len(subtitles) else ""
 
-    final_clip = CompositeVideoClip([image_clip, subtitle_clip])
-    final_clip = final_clip.set_audio(audio_clip)
+        subtitle_img = create_subtitle(text)
+
+        subtitle_clip = ImageClip(subtitle_img)
+        subtitle_clip = subtitle_clip.set_duration(audio_clip.duration)
+        subtitle_clip = subtitle_clip.set_position(("center",580))
+
+        final_clip = CompositeVideoClip([image_clip, subtitle_clip])
+        final_clip = final_clip.set_audio(audio_clip)
+
+    # ----------------------
+    # CASE 2: IMAGE ONLY
+    # ----------------------
+    else:
+
+        print("Adding image without audio:", img)
+
+        duration = 3
+
+        image_clip = ImageClip(image_path)
+        image_clip = image_clip.set_duration(duration)
+        image_clip = image_clip.resize((1280,720))
+
+        text = subtitles[i] if i < len(subtitles) else ""
+
+        subtitle_img = create_subtitle(text)
+
+        subtitle_clip = ImageClip(subtitle_img)
+        subtitle_clip = subtitle_clip.set_duration(duration)
+        subtitle_clip = subtitle_clip.set_position(("center",580))
+
+        final_clip = CompositeVideoClip([image_clip, subtitle_clip])
 
     clips.append(final_clip)
 

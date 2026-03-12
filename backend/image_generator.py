@@ -20,24 +20,22 @@ def read_prompts():
         print("visual_prompts.txt not found")
         return []
 
+    prompts = []
+
     with open(file_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
-    prompts = []
-
     for line in lines:
+
         line = line.strip()
 
         if not line:
             continue
 
-        if line.startswith("Scene"):
-            continue
-
-        if "**" in line:
-            continue
-
-        prompts.append(line)
+        # extract prompts from lines starting with **
+        if line.startswith("**"):
+            prompt = line.replace("**", "").strip()
+            prompts.append(prompt)
 
     print(f"Loaded {len(prompts)} prompts")
 
@@ -86,10 +84,11 @@ def generate_images():
 
         print(f"\nGenerating Image {i+1}/{len(prompts)}")
 
-        # small prompt enhancement
+        # prompt enhancement for educational visuals
         enhanced_prompt = (
             prompt
-            + ", ultra detailed, cinematic lighting, dramatic shadows, professional illustration, sharp focus"
+            + ", clean vector illustration, educational infographic style, "
+              "modern technology diagram, minimal design, sharp focus"
         )
 
         try:

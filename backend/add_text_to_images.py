@@ -29,7 +29,7 @@ captions = [
 ]
 
 # Load font
-font = ImageFont.truetype("arial.ttf", 36)
+font = ImageFont.truetype("arial.ttf", 32)
 
 # Process each image
 for i, file in enumerate(sorted(os.listdir(IMAGE_FOLDER))):

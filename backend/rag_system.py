@@ -9,19 +9,24 @@ from langchain_community.llms import Ollama
 from langchain_core.documents import Document
 from docx import Document as WordDocument
 
-# IMPORTANT: prevent output buffering
+# Prevent output buffering
 sys.stdout.reconfigure(line_buffering=True)
-
 
 DATA_PATH = "project_knowledge.json"
 VECTOR_DB_PATH = "project_vector_db"
-OLLAMA_MODEL = "llama3:8b"
+
+# Model settings
+OLLAMA_MODEL = "phi3:mini"
 
 OUTPUT_LOG_FILE = "rag_output.txt"
 DOC_OUTPUT_FILE = "project_documentation.docx"
 
 SIMILARITY_THRESHOLD = 0.4
 
+
+# ==============================
+# LOAD PROJECT DATASET
+# ==============================
 
 def load_projects():
 
@@ -51,21 +56,29 @@ def load_projects():
     return documents
 
 
+# ==============================
+# CREATE CHUNKS
+# ==============================
+
 def create_chunks(documents):
 
-    print("Splitting documents into chunks...", flush=True)
+    print("Splitting documents...", flush=True)
 
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1500,
-        chunk_overlap=200
+        chunk_size=400,
+        chunk_overlap=60
     )
 
     chunks = splitter.split_documents(documents)
 
-    print("Total chunks created:", len(chunks), flush=True)
+    print("Chunks created:", len(chunks), flush=True)
 
     return chunks
 
+
+# ==============================
+# LOAD EMBEDDINGS
+# ==============================
 
 def get_embeddings():
 
@@ -76,18 +89,26 @@ def get_embeddings():
     )
 
 
+# ==============================
+# BUILD VECTOR DATABASE
+# ==============================
+
 def build_vector_db(chunks, embeddings):
 
-    print("Creating FAISS vector database...", flush=True)
+    print("Creating vector database...", flush=True)
 
     vector_db = FAISS.from_documents(chunks, embeddings)
 
     vector_db.save_local(VECTOR_DB_PATH)
 
-    print("Vector database saved!", flush=True)
+    print("Vector database saved!")
 
     return vector_db
 
+
+# ==============================
+# LOAD VECTOR DATABASE
+# ==============================
 
 def load_vector_db(embeddings):
 
@@ -100,56 +121,128 @@ def load_vector_db(embeddings):
     )
 
 
+# ==============================
+# LOAD LLM
+# ==============================
+
 def load_llm():
 
-    print("Loading Ollama model...", flush=True)
+    print("Loading Ollama model (phi3:mini)...", flush=True)
 
-    try:
-        return Ollama(model=OLLAMA_MODEL, base_url="http://localhost:11434")
-    except Exception as e:
-        print("Ollama not running:", e)
-        sys.exit()
+    return Ollama(
+        model=OLLAMA_MODEL,
+        base_url="http://localhost:11434",
+        num_predict=1200,
+        temperature=0
+    )
 
+
+# ==============================
+# ASK QUESTION
+# ==============================
 
 def ask_question(query, vector_db, llm):
 
     print("Searching knowledge base...", flush=True)
 
-    docs = vector_db.similarity_search(query, k=10)
+    results = vector_db.similarity_search_with_score(query, k=3)
 
-    context = "\n\n".join(
-        [f"Project Title: {doc.metadata.get('title','')}\n{doc.page_content}"
-         for doc in docs]
-    )
+    filtered_docs = []
+
+    for doc, score in results:
+        if score < SIMILARITY_THRESHOLD:
+            filtered_docs.append(doc)
+
+    docs = filtered_docs[:1]
+
+    if len(docs) == 0:
+        docs = [doc for doc, score in results[:1]]
+
+    context = docs[0].page_content if docs else ""
 
     prompt = f"""
-Generate complete software project documentation.
+You are a professional software project documentation generator.
 
-Project Topic:
-{query}
+IMPORTANT RULES:
+- The project title MUST be exactly: {query}
+- Do NOT change the project name.
+- Do NOT introduce other project ideas.
+- Do NOT skip any section.
+- Implementation steps MUST contain exactly 10 steps.
+- Each step must be a SHORT sentence.
+- If information is missing, generate reasonable content.
 
-Context:
+Use the following structure EXACTLY.
+
+Project Title: {query}
+
+Project Overview:
+Write 3-4 sentences explaining the project.
+
+Objective:
+Write 2-3 sentences describing the goal.
+
+Domain:
+Mention the domain clearly.
+
+Software Requirements:
+- item
+- item
+- item
+
+Hardware Requirements:
+- item
+- item
+- item
+
+Workflow:
+Explain system workflow briefly.
+
+System Architecture:
+Explain architecture briefly.
+
+Input:
+Describe system inputs.
+
+Output:
+Describe system outputs.
+
+Implementation Steps:
+1. Step one.
+2. Step two.
+3. Step three.
+4. Step four.
+5. Step five.
+6. Step six.
+7. Step seven.
+8. Step eight.
+9. Step nine.
+10. Step ten.
+
+Benefits:
+- Benefit one
+- Benefit two
+- Benefit three
+- Benefit four
+- Benefit five
+
+Future Scope:
+- Future improvement one
+- Future improvement two
+- Future improvement three
+- Future improvement four
+- Future improvement five
+
+Context information (reference only):
 {context}
-
-Return structured output:
-
-Project Title
-Project Overview
-Objective
-Domain
-Software Requirements
-Hardware Requirements
-Workflow
-System Architecture
-Input
-Output
-Implementation Steps
-Benefits
-Future Scope
 """
 
     return llm.invoke(prompt)
 
+
+# ==============================
+# SAVE TEXT OUTPUT
+# ==============================
 
 def save_output(query, answer):
 
@@ -166,8 +259,12 @@ def save_output(query, answer):
 
         f.write("=" * 60 + "\n")
 
-    print("Output saved ->", OUTPUT_LOG_FILE, flush=True)
+    print("Output saved ->", OUTPUT_LOG_FILE)
 
+
+# ==============================
+# SAVE WORD DOCUMENT
+# ==============================
 
 def save_output_doc(query, answer):
 
@@ -183,12 +280,16 @@ def save_output_doc(query, answer):
 
     doc.save(DOC_OUTPUT_FILE)
 
-    print("Word document created:", DOC_OUTPUT_FILE, flush=True)
+    print("Word document created:", DOC_OUTPUT_FILE)
 
+
+# ==============================
+# MAIN
+# ==============================
 
 if __name__ == "__main__":
 
-    print("\n===== PROJECT RAG SYSTEM =====\n", flush=True)
+    print("\n===== PROJECT RAG SYSTEM =====\n")
 
     embeddings = get_embeddings()
 
@@ -196,11 +297,11 @@ if __name__ == "__main__":
 
         vector_db = load_vector_db(embeddings)
 
-        print("Using existing vector database", flush=True)
+        print("Using existing vector database")
 
     except Exception:
 
-        print("Building new vector database...\n", flush=True)
+        print("Building new vector database...\n")
 
         documents = load_projects()
 
@@ -210,13 +311,16 @@ if __name__ == "__main__":
 
     llm = load_llm()
 
-    print("RAG system ready\n", flush=True)
+    print("RAG system ready\n")
 
     query = sys.argv[1] if len(sys.argv) > 1 else ""
 
+    if query == "":
+        query = input("Enter project topic: ")
+
     answer = ask_question(query, vector_db, llm)
 
-    print("\nAnswer:\n", answer, flush=True)
+    print("\nAnswer:\n", answer)
 
     save_output(query, answer)
 
