@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
 
 <meta charset="UTF-8">
@@ -17,11 +16,9 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
 
 </head>
 
-<body class="text-white min-h-screen">
+<body class="text-white min-h-screen bg-black">
 
 <div class="hero-glow"></div>
-
-<!-- HEADER -->
 
 <header class="glass-header py-6 px-8">
 
@@ -33,259 +30,36 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
 <i class="fas fa-video"></i>
 </div>
 
-<div>
 <h1 class="text-2xl font-bold">Auto Project Narrator</h1>
-<p class="text-gray-400 text-sm">
-AI-Powered Video Generation Platform
-</p>
-</div>
 
 </div>
 
-<div class="flex items-center gap-2 text-green-400 text-sm">
-<span class="status-dot"></span>
-System Online
+<div class="text-green-400 text-sm">
+● System Online
 </div>
 
 </div>
 
 </header>
 
-<!-- HERO -->
+<section class="py-24 text-center">
 
-<section class="py-16">
-
-<div class="max-w-6xl mx-auto px-6">
-
-<div class="hero-card p-16 rounded-3xl text-center">
-
-<div class="hero-icon">
-<i class="fas fa-wand-magic-sparkles"></i>
-</div>
-
-<h1 class="hero-title">
+<h1 class="text-5xl font-bold mb-8">
 Create Amazing Videos
 </h1>
 
-<p class="hero-subtitle">
-
-Transform your ideas into
-<span class="highlight">breathtaking</span>
-professional videos with our
-<span class="highlight2">cutting-edge AI</span>
-technology
-
+<p class="text-gray-400 mb-12">
+Transform your ideas into professional AI videos
 </p>
 
-</div>
+<a href="generate.html"
+class="bg-green-500 px-10 py-4 rounded-xl text-lg">
 
-</div>
-
-</section>
-
-<!-- FEATURES -->
-
-<section class="features">
-
-<div class="feature">
-
-<div class="feature-icon yellow">
-<i class="fas fa-bolt"></i>
-</div>
-
-<span>Lightning Fast</span>
-
-</div>
-
-<div class="feature">
-
-<div class="feature-icon pink">
-<i class="fas fa-star"></i>
-</div>
-
-<span>Premium Quality</span>
-
-</div>
-
-<div class="feature">
-
-<div class="feature-icon blue">
-<i class="fas fa-robot"></i>
-</div>
-
-<span>AI Powered</span>
-
-</div>
-
-</section>
-
-<!-- STATUS -->
-
-<section class="status-section">
-
-<span class="green-dot">● System Active</span>
-<span class="blue-dot">● AI Ready</span>
-<span class="purple-dot">● Processing Available</span>
-
-</section>
-
-<!-- FORM -->
-
-<section class="pb-24">
-
-<div class="max-w-4xl mx-auto px-6">
-
-<div class="glass-card p-12 rounded-2xl">
-
-<form id="projectForm">
-
-<label class="input-title">
-<i class="fas fa-lightbulb text-yellow-400"></i>
-Project Title
-</label>
-
-<input
-type="text"
-id="projectTitle"
-placeholder="Enter your amazing project title..."
-class="input-box"
-/>
-
-<p class="input-note">
-Optional — you can also enter only description
-</p>
-
-<label class="input-title mt-10">
-<i class="fas fa-file text-blue-400"></i>
-Project Description
-</label>
-
-<textarea
-id="projectDescription"
-rows="4"
-placeholder="Describe your project in detail..."
-class="input-box">
-</textarea>
-
-<div class="text-center mt-10">
-
-<button type="submit" class="generate-btn">
-<i class="fas fa-rocket"></i>
-Generate Professional Video →
-</button>
-
-</div>
-
-</form>
-
-</div>
-
-</div>
-
-</section>
-
-<!-- OUTPUT SECTION -->
-
-<section class="pb-24">
-
-<div class="max-w-4xl mx-auto px-6">
-
-<div class="glass-card p-12 rounded-2xl text-center">
-
-<h2 class="text-2xl font-bold mb-6">
-Generation Status
-</h2>
-
-<p id="status" class="text-green-400 text-lg mb-6">
-Waiting for generation...
-</p>
-
-<!-- PROGRESS BAR -->
-
-<div class="w-full bg-gray-700 rounded-full h-4 mb-8">
-
-<div id="progressBar"
-class="bg-green-500 h-4 rounded-full"
-style="width:0%">
-</div>
-
-</div>
-
-<!-- VIDEO PLAYER -->
-
-<video
-id="videoPlayer"
-controls
-class="w-full rounded-xl shadow-lg mb-8">
-</video>
-
-<!-- DOWNLOAD BUTTONS -->
-
-<div class="flex justify-center gap-6 flex-wrap">
-
-<a
-id="downloadVideo"
-class="generate-btn"
-download>
-
-<i class="fas fa-download"></i>
-Download Video
+Start Creating Video →
 
 </a>
 
-<a
-id="downloadDoc"
-class="generate-btn"
-download>
-
-<i class="fas fa-file-download"></i>
-Download Documentation
-
-</a>
-
-</div>
-
-</div>
-
-</div>
-
 </section>
-
-<!-- FOOTER -->
-
-<footer class="glass-header py-8 px-8">
-
-<div class="container mx-auto flex flex-col md:flex-row items-center justify-between">
-
-<p class="text-sm text-gray-400">
-© 2026 Auto Project Narrator. Powered by Advanced AI Technology.
-</p>
-
-<div class="flex gap-6 mt-4 md:mt-0 text-sm">
-
-<span class="text-green-400">
-<i class="fas fa-shield-alt"></i> Secure
-</span>
-
-<span class="text-yellow-400">
-<i class="fas fa-bolt"></i> Fast
-</span>
-
-<span class="text-purple-400">
-<i class="fas fa-award"></i> Premium
-</span>
-
-</div>
-
-</div>
-
-</footer>
-
-<!-- SCRIPTS -->
-
-<script src="script.js"></script>
-<script src="js/enhanced_video_player.js"></script>
 
 </body>
-
 </html>

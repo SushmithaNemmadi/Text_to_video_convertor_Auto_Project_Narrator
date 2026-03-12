@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<title>Generated Video</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+</head>
+
+<body class="bg-black text-white p-16">
+
+<h1 class="text-4xl text-center mb-12">
+Your Generated Video
+</h1>
+
+<div class="max-w-4xl mx-auto text-center">
+
+<video
+id="videoPlayer"
+controls
+class="w-full rounded-xl shadow-lg">
+
+<source src="/static/output_video.mp4" type="video/mp4">
+
+</video>
+
+<div class="mt-10 flex justify-center gap-6">
+
+<a
+href="/static/output_video.mp4"
+download
+class="bg-green-500 px-6 py-3 rounded-xl">
+
+Download Video
+
+</a>
+
+<a
+href="/static/documentation.pdf"
+download
+class="bg-blue-500 px-6 py-3 rounded-xl">
+
+Download Documentation
+
+</a>
+
+</div>
+
+<br>
+
+<a href="index.html"
+class="text-gray-400">
+
+Generate Another Video
+
+</a>
+
+</div>
+
+</body>
+</html>
