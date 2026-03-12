@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<title>Create Project</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<link rel="stylesheet" href="css/enhanced_styles.css">
+
+</head>
+
+<body class="bg-black text-white">
+
+<section class="py-24">
+
+<div class="max-w-4xl mx-auto">
+
+<div class="glass-card p-12 rounded-2xl">
+
+<h2 class="text-3xl font-bold mb-8 text-center">
+Enter Project Details
+</h2>
+
+<form id="projectForm">
+
+<label class="block mb-2">
+Project Title
+</label>
+
+<input
+type="text"
+id="projectTitle"
+class="input-box w-full"
+placeholder="Enter project title">
+
+<label class="block mt-8 mb-2">
+Project Description
+</label>
+
+<textarea
+id="projectDescription"
+rows="5"
+class="input-box w-full"
+placeholder="Describe your project">
+</textarea>
+
+<div class="text-center mt-10">
+
+<button
+type="submit"
+class="generate-btn">
+
+Generate Video →
+
+</button>
+
+</div>
+
+</form>
+
+</div>
+
+</div>
+
+</section>
+
+<script src="js/generate.js"></script>
+
+</body>
+</html>
