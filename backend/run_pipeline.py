@@ -90,7 +90,15 @@ run_step(
 )
 
 
-# STEP 5 — VIDEO
+# STEP 5 — DIAGRAM (NEW STEP)
+run_step(
+    "DIAGRAM",
+    "Generating diagrams...",
+    f"python -u {BACKEND}/diagram_generator.py"
+)
+
+
+# STEP 6 — VIDEO
 run_step(
     "VIDEO",
     "Generating video...",

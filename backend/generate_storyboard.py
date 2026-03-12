@@ -1,4 +1,5 @@
 import os
+import re
 from langchain_ollama import OllamaLLM
 
 # ==============================
@@ -6,9 +7,14 @@ from langchain_ollama import OllamaLLM
 # ==============================
 
 INPUT_FILE = "rag_output.txt"
-OUTPUT_FILE = "visual_prompts.txt"
+
+DATA_FOLDER = "data"
+STORYBOARD_FILE = os.path.join(DATA_FOLDER, "storyboard.txt")
+NARRATION_FILE = os.path.join(DATA_FOLDER, "narration.txt")
+VISUAL_FILE = os.path.join(DATA_FOLDER, "visual_prompts.txt")
 
 OLLAMA_MODEL = "phi3:mini"
+TOTAL_SCENES = 10
 
 
 # ==============================
@@ -22,7 +28,7 @@ def load_llm():
     return OllamaLLM(
         model=OLLAMA_MODEL,
         temperature=0,
-        num_predict=60
+        num_predict=1200
     )
 
 
@@ -30,7 +36,7 @@ def load_llm():
 # READ PROJECT TEXT
 # ==============================
 
-def read_input():
+def read_project():
 
     if not os.path.exists(INPUT_FILE):
         print("rag_output.txt not found")
@@ -41,62 +47,90 @@ def read_input():
 
 
 # ==============================
-# GENERATE ONE VISUAL PROMPT
+# GENERATE STORYBOARD
 # ==============================
 
-def generate_visual_prompt(scene_number, project_text, llm):
+def generate_storyboard(project_text, llm):
 
     prompt = f"""
-Create ONE visual prompt for an educational YouTube tech explainer video.
+You are creating a storyboard for a technical YouTube explainer video.
 
-Project:
+Project description:
 {project_text}
 
-Scene number: {scene_number}
+You MUST create exactly {TOTAL_SCENES} scenes.
 
-RULES
-- The image must explain the system visually
-- Use system diagrams, workflows, or UI screens
-- Avoid cinematic scenes or people typing
+IMPORTANT RULES:
+- Do NOT generate fewer than {TOTAL_SCENES} scenes
+- Do NOT generate more than {TOTAL_SCENES} scenes
+- Each scene must explain a different part of the system
 
-FORMAT
-Visual Prompt:
+STRICT FORMAT:
+
+Scene 1
+Narration: ...
+Visual: ...
+
+Scene 2
+Narration: ...
+Visual: ...
+
+Continue until Scene {TOTAL_SCENES}.
 """
 
     result = llm.invoke(prompt)
 
-    return f"Scene {scene_number}\n{result.strip()}\n"
+    return result.strip()
 
 
 # ==============================
-# GENERATE 10 PROMPTS
+# PARSE STORYBOARD
 # ==============================
 
-def generate_prompts(project_text, llm):
+def parse_storyboard(storyboard):
 
-    prompts = ""
+    narration_list = []
+    visual_list = []
 
-    for i in range(1, 11):
+    scenes = re.split(r"Scene\s+\d+", storyboard)
 
-        print(f"Generating visual prompt {i}")
+    scene_number = 1
 
-        scene_prompt = generate_visual_prompt(i, project_text, llm)
+    for scene in scenes:
 
-        prompts += scene_prompt + "\n"
+        if scene.strip() == "":
+            continue
 
-    return prompts
+        narration_match = re.search(r"Narration:\s*(.*)", scene)
+        visual_match = re.search(r"Visual:\s*(.*)", scene)
+
+        if narration_match:
+            narration_text = narration_match.group(1).strip()
+            narration_list.append(f"Scene {scene_number}\n{narration_text}")
+
+        if visual_match:
+            visual_text = visual_match.group(1).strip()
+            visual_list.append(f"Scene {scene_number}\n{visual_text}")
+
+        scene_number += 1
+
+    return narration_list, visual_list
 
 
 # ==============================
-# SAVE OUTPUT
+# SAVE FILE
 # ==============================
 
-def save_output(prompts):
+def save_file(path, content):
 
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        f.write(prompts)
+    with open(path, "w", encoding="utf-8") as f:
 
-    print("Saved visual prompts to", OUTPUT_FILE)
+        if isinstance(content, list):
+            f.write("\n\n".join(content))
+        else:
+            f.write(content)
+
+    print("Saved:", path)
 
 
 # ==============================
@@ -105,17 +139,29 @@ def save_output(prompts):
 
 if __name__ == "__main__":
 
-    print("\nFAST VISUAL PROMPT GENERATOR\n")
+    print("\nAI STORYBOARD GENERATOR\n")
 
-    text = read_input()
+    if not os.path.exists(DATA_FOLDER):
+        os.makedirs(DATA_FOLDER)
 
-    if text is None:
+    project_text = read_project()
+
+    if project_text is None:
         exit()
 
     llm = load_llm()
 
-    prompts = generate_prompts(text, llm)
+    print("\nGenerating storyboard...\n")
 
-    save_output(prompts)
+    storyboard = generate_storyboard(project_text, llm)
 
-    print("\nFinished generating 10 visual prompts.")
+    save_file(STORYBOARD_FILE, storyboard)
+
+    print("\nExtracting narration and visuals...\n")
+
+    narration, visuals = parse_storyboard(storyboard)
+
+    save_file(NARRATION_FILE, narration)
+    save_file(VISUAL_FILE, visuals)
+
+    print("\nFinished generating files.")

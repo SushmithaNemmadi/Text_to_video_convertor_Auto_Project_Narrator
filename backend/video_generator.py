@@ -76,13 +76,10 @@ if os.path.exists(narration_file):
             if not line:
                 continue
 
-            # ignore scene titles
             if line.lower().startswith("scene"):
                 continue
 
-            # remove ** symbols
             line = line.replace("*", "")
-
             line = line.strip()
 
             if line:
@@ -93,10 +90,10 @@ subtitles = subtitles[:len(image_files)]
 print("Subtitles Loaded:", len(subtitles))
 
 # =========================
-# FONT
+# FONT (REDUCED SIZE)
 # =========================
 
-font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 20)
+font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 16)
 
 # =========================
 # CREATE SUBTITLE IMAGE
@@ -148,9 +145,7 @@ for i in range(total_images):
 
     print("\nProcessing:", img)
 
-    # ----------------------
-    # CASE 1: IMAGE + AUDIO
-    # ----------------------
+    # IMAGE + AUDIO
     if i < total_audio:
 
         aud = audio_files[i]
@@ -176,9 +171,7 @@ for i in range(total_images):
         final_clip = CompositeVideoClip([image_clip, subtitle_clip])
         final_clip = final_clip.set_audio(audio_clip)
 
-    # ----------------------
-    # CASE 2: IMAGE ONLY
-    # ----------------------
+    # IMAGE ONLY
     else:
 
         print("Adding image without audio:", img)

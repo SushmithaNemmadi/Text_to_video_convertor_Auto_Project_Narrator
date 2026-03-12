@@ -60,7 +60,7 @@ def run_job(job_id, query):
         ["python", "-u", "backend/run_pipeline.py", query],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        text=True,
+        text=True
     )
 
     for line in process.stdout:
@@ -79,6 +79,9 @@ def run_job(job_id, query):
 
         elif "STAGE: AUDIO" in line:
             update_job(job_id, "Generating narration audio...", 70)
+
+        elif "STAGE: DIAGRAM" in line:
+            update_job(job_id, "Generating diagrams...", 80)
 
         elif "STAGE: VIDEO" in line:
             update_job(job_id, "Rendering final video...", 90)
@@ -127,7 +130,9 @@ def status(job_id):
     if job is None:
         return jsonify({
             "status": "Initializing...",
-            "progress": 0
+            "progress": 0,
+            "video": None,
+            "doc": None
         })
 
     return jsonify({

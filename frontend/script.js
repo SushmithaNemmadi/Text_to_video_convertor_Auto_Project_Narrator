@@ -78,17 +78,19 @@ async function checkStatus(jobId) {
             const videoPlayer = document.getElementById("videoPlayer");
 
             videoPlayer.src = API + data.video;
-            videoPlayer.load();
             videoPlayer.style.display = "block";
+            videoPlayer.load();
 
-            document.getElementById("downloadVideo").href =
-                API + data.video;
+            const downloadVideo = document.getElementById("downloadVideo");
+            downloadVideo.href = API + data.video;
+            downloadVideo.style.display = "inline-block";
         }
 
         if (data.doc) {
 
-            document.getElementById("downloadDoc").href =
-                API + data.doc;
+            const downloadDoc = document.getElementById("downloadDoc");
+            downloadDoc.href = API + data.doc;
+            downloadDoc.style.display = "inline-block";
         }
     }
 }
