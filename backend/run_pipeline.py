@@ -1,6 +1,7 @@
 import os
 import sys
 import subprocess
+import re
 
 # Force immediate stdout flush
 sys.stdout.reconfigure(line_buffering=True)
@@ -9,6 +10,38 @@ sys.stdout.reconfigure(line_buffering=True)
 def log(msg):
     print(msg, flush=True)
 
+
+# ==============================
+# QUERY VALIDATION
+# ==============================
+
+def is_valid_query(query):
+
+    query = query.strip()
+
+    # Too short
+    if len(query) < 10:
+        return False
+
+    # Must contain at least 3 words
+    words = query.split()
+    if len(words) < 3:
+        return False
+
+    # Reject random characters
+    if not re.search(r"[a-zA-Z]", query):
+        return False
+
+    # Reject repeated same characters like "aaaaa"
+    if re.fullmatch(r"(.)\1{5,}", query):
+        return False
+
+    return True
+
+
+# ==============================
+# RUN PIPELINE STEP
+# ==============================
 
 def run_step(stage, message, command):
 
@@ -47,18 +80,37 @@ def run_step(stage, message, command):
         sys.exit(1)
 
 
+# ==============================
+# START PIPELINE
+# ==============================
+
 log("\n===================================")
 log("PROJECT -> VIDEO PIPELINE STARTED")
 log("===================================\n")
 
-query = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "Default Project"
+query = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else ""
+
+# Validate query
+if not is_valid_query(query):
+
+    print("STAGE: INVALID_INPUT", flush=True)
+
+    log("\nERROR: Input query is unclear.")
+    log("Please enter a clear project topic.")
+    log("Example: 'Smart Parking System using IoT'")
+
+    sys.exit(1)
+
 
 log(f"Project Topic: {query}")
 
 BACKEND = "backend"
 
 
+# ==============================
 # STEP 1 — RAG
+# ==============================
+
 run_step(
     "RAG_START",
     "Generating RAG output...",
@@ -66,7 +118,10 @@ run_step(
 )
 
 
+# ==============================
 # STEP 2 — STORYBOARD
+# ==============================
+
 run_step(
     "STORYBOARD",
     "Generating storyboard...",
@@ -74,7 +129,10 @@ run_step(
 )
 
 
+# ==============================
 # STEP 3 — IMAGES
+# ==============================
+
 run_step(
     "IMAGES",
     "Generating images...",
@@ -82,7 +140,10 @@ run_step(
 )
 
 
+# ==============================
 # STEP 4 — AUDIO
+# ==============================
+
 run_step(
     "AUDIO",
     "Generating audio...",
@@ -90,7 +151,10 @@ run_step(
 )
 
 
-# STEP 5 — DIAGRAM (NEW STEP)
+# ==============================
+# STEP 5 — DIAGRAM
+# ==============================
+
 run_step(
     "DIAGRAM",
     "Generating diagrams...",
@@ -98,7 +162,10 @@ run_step(
 )
 
 
+# ==============================
 # STEP 6 — VIDEO
+# ==============================
+
 run_step(
     "VIDEO",
     "Generating video...",

@@ -93,7 +93,7 @@ print("Subtitles Loaded:", len(subtitles))
 # FONT (REDUCED SIZE)
 # =========================
 
-font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 16)
+font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 18)
 
 # =========================
 # CREATE SUBTITLE IMAGE

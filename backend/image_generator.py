@@ -1,6 +1,7 @@
 import requests
 import os
 
+
 # ==============================
 # COLAB SERVER URL
 # ==============================
@@ -21,6 +22,7 @@ def read_prompts():
         return []
 
     prompts = []
+    current_prompt = ""
 
     with open(file_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
@@ -32,10 +34,30 @@ def read_prompts():
         if not line:
             continue
 
-        # extract prompts from lines starting with **
-        if line.startswith("**"):
-            prompt = line.replace("**", "").strip()
-            prompts.append(prompt)
+        # Detect new scene
+        if line.lower().startswith("scene"):
+
+            if current_prompt:
+                prompts.append(current_prompt.strip())
+                current_prompt = ""
+
+            continue
+
+        # Clean unwanted characters
+        line = line.replace("[", "")
+        line = line.replace("]", "")
+        line = line.replace("*", "")
+        line = line.strip()
+
+        # Build prompt
+        if current_prompt:
+            current_prompt += " " + line
+        else:
+            current_prompt = line
+
+    # Add last prompt
+    if current_prompt:
+        prompts.append(current_prompt.strip())
 
     print(f"Loaded {len(prompts)} prompts")
 
@@ -51,13 +73,18 @@ def clear_old_images(folder):
     if not os.path.exists(folder):
         return
 
+    deleted = 0
+
     for file in os.listdir(folder):
 
         file_path = os.path.join(folder, file)
 
         if file.endswith((".png", ".jpg", ".jpeg")):
             os.remove(file_path)
-            print("Deleted:", file_path)
+            deleted += 1
+
+    if deleted > 0:
+        print(f"Deleted {deleted} old images")
 
 
 # ==============================
@@ -75,7 +102,7 @@ def generate_images():
     output_folder = "images"
     os.makedirs(output_folder, exist_ok=True)
 
-    # remove old images
+    # Remove previous images
     clear_old_images(output_folder)
 
     session = requests.Session()
@@ -84,11 +111,11 @@ def generate_images():
 
         print(f"\nGenerating Image {i+1}/{len(prompts)}")
 
-        # prompt enhancement for educational visuals
         enhanced_prompt = (
-            prompt
-            + ", clean vector illustration, educational infographic style, "
-              "modern technology diagram, minimal design, sharp focus"
+            prompt +
+            ", flat vector infographic, educational diagram, "
+            "white background, modern UI icons, minimal colors, "
+            "professional explainer video style, clean vector illustration, 4k"
         )
 
         try:

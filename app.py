@@ -25,8 +25,8 @@ def generate():
 
     data = request.get_json()
 
-    title = data.get("project_topic", "")
-    description = data.get("project_description", "")
+    title = data.get("project_topic", "").strip()
+    description = data.get("project_description", "").strip()
 
     if not title and not description:
         return jsonify({"error": "Enter title or description"}), 400
@@ -44,7 +44,11 @@ def generate():
             "doc": None
         }
 
-    thread = threading.Thread(target=run_job, args=(job_id, query), daemon=True)
+    thread = threading.Thread(
+        target=run_job,
+        args=(job_id, query),
+        daemon=True
+    )
     thread.start()
 
     return jsonify({"job_id": job_id})
@@ -63,38 +67,68 @@ def run_job(job_id, query):
         text=True
     )
 
-    for line in process.stdout:
+    try:
 
-        line = line.strip()
-        print("PIPELINE:", line, flush=True)
+        for line in process.stdout:
 
-        if "STAGE: RAG_START" in line:
-            update_job(job_id, "Generating project documentation...", 10)
+            line = line.strip()
+            print("PIPELINE:", line, flush=True)
 
-        elif "STAGE: STORYBOARD" in line:
-            update_job(job_id, "Creating storyboard...", 30)
+            # -----------------------
+            # INVALID INPUT DETECTED
+            # -----------------------
+            if "STAGE: INVALID_INPUT" in line:
 
-        elif "STAGE: IMAGES" in line:
-            update_job(job_id, "Generating images...", 50)
+                update_job(
+                    job_id,
+                    "Invalid project title. Please enter a valid project topic.",
+                    0
+                )
 
-        elif "STAGE: AUDIO" in line:
-            update_job(job_id, "Generating narration audio...", 70)
+                process.terminate()
+                return
 
-        elif "STAGE: DIAGRAM" in line:
-            update_job(job_id, "Generating diagrams...", 80)
+            # -----------------------
+            # PIPELINE STAGES
+            # -----------------------
 
-        elif "STAGE: VIDEO" in line:
-            update_job(job_id, "Rendering final video...", 90)
+            elif "STAGE: RAG_START" in line:
+                update_job(job_id, "Generating project documentation...", 10)
 
-        elif "STAGE: COMPLETE" in line:
+            elif "STAGE: STORYBOARD" in line:
+                update_job(job_id, "Creating storyboard...", 30)
 
-            with lock:
-                jobs[job_id]["video"] = f"/api/video/{job_id}"
-                jobs[job_id]["doc"] = f"/api/document/{job_id}"
+            elif "STAGE: IMAGES" in line:
+                update_job(job_id, "Generating images...", 50)
 
-            update_job(job_id, "Completed", 100)
+            elif "STAGE: AUDIO" in line:
+                update_job(job_id, "Generating narration audio...", 70)
 
-    process.wait()
+            elif "STAGE: DIAGRAM" in line:
+                update_job(job_id, "Generating diagrams...", 80)
+
+            elif "STAGE: VIDEO" in line:
+                update_job(job_id, "Rendering final video...", 90)
+
+            elif "STAGE: COMPLETE" in line:
+
+                with lock:
+                    jobs[job_id]["video"] = f"/api/video/{job_id}"
+                    jobs[job_id]["doc"] = f"/api/document/{job_id}"
+
+                update_job(job_id, "Completed", 100)
+
+        process.wait()
+
+        # If process crashes unexpectedly
+        if process.returncode != 0:
+            update_job(job_id, "Pipeline failed. Please try again.", 0)
+
+    except Exception as e:
+
+        print("PIPELINE ERROR:", str(e))
+
+        update_job(job_id, "Pipeline error occurred.", 0)
 
 
 # -------------------------------

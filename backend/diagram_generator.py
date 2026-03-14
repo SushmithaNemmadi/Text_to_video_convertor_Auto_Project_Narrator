@@ -28,7 +28,7 @@ def get_next_image_number():
     if numbers:
         return max(numbers) + 1
     else:
-        return 11   # start numbering from image_11
+        return 11
 
 
 # ---------------------------
@@ -51,9 +51,32 @@ def extract_workflow(text):
 def extract_technologies(text):
 
     tech_keywords = [
-        "python","java","c++","javascript","tensorflow","pytorch","keras",
-        "react","angular","node","express","mongodb","mysql","aws","docker",
-        "kubernetes","pandas","numpy","opencv","flask","django"
+
+        "python","java","c++","c","javascript","typescript","go","rust","kotlin","swift",
+
+        "tensorflow","pytorch","keras","scikit-learn","opencv","huggingface","langchain",
+
+        "pandas","numpy","matplotlib","seaborn",
+
+        "react","angular","vue","html","css","bootstrap",
+
+        "flask","django","fastapi","node","express","spring","springboot",
+
+        "react native","flutter","android","ios",
+
+        "mysql","postgresql","mongodb","sqlite","oracle","redis","cassandra",
+
+        "hadoop","spark","pyspark","kafka","hive",
+
+        "aws","azure","gcp","google cloud","firebase",
+
+        "docker","kubernetes","jenkins","github actions","gitlab",
+
+        "rest api","graphql","api gateway",
+
+        "tableau","power bi","plotly",
+
+        "blockchain","cybersecurity","encryption","oauth","jwt"
     ]
 
     found = []
@@ -72,13 +95,50 @@ def extract_technologies(text):
 def extract_modules(text):
 
     module_keywords = {
+
         "frontend": "Frontend Interface",
         "backend": "Backend Server",
-        "database": "Database System",
+        "server": "Application Server",
+        "client": "Client Interface",
+
         "ai": "AI Engine",
-        "data": "Data Processing",
+        "machine learning": "ML Model",
+        "deep learning": "Deep Learning Module",
+        "neural network": "Neural Network Engine",
+
+        "data": "Data Processing Module",
+        "analytics": "Analytics Module",
+        "preprocessing": "Data Preprocessing Module",
         "visualization": "Visualization Module",
-        "security": "Security Module"
+
+        "database": "Database System",
+        "storage": "Data Storage Module",
+        "warehouse": "Data Warehouse",
+
+        "api": "API Gateway",
+        "integration": "Integration Layer",
+
+        "security": "Security Module",
+        "authentication": "Authentication Module",
+        "authorization": "Access Control Module",
+        "encryption": "Encryption Module",
+
+        "cloud": "Cloud Infrastructure",
+        "deployment": "Deployment Module",
+        "container": "Container Management",
+
+        "monitoring": "Monitoring System",
+        "logging": "Logging Module",
+
+        "sensor": "Sensor Network",
+        "iot": "IoT Module",
+
+        "user": "User Interface",
+        "dashboard": "Dashboard Module",
+
+        "report": "Reporting Module",
+
+        "recommendation": "Recommendation Engine"
     }
 
     modules = []
@@ -97,6 +157,34 @@ def extract_modules(text):
         ]
 
     return modules[:6]
+
+
+# ---------------------------
+# Diagram Style Settings
+# ---------------------------
+def apply_style(dot):
+
+    dot.attr(
+        size="16,9!",
+        dpi="300",
+        ranksep="1.2",
+        nodesep="0.8"
+    )
+
+    dot.attr(
+        'node',
+        shape='ellipse',
+        fontsize='22',
+        width='2.5',
+        height='1.2',
+        style='filled',
+        fillcolor='lightblue'
+    )
+
+    dot.attr(
+        'edge',
+        fontsize='18'
+    )
 
 
 # ---------------------------
@@ -120,6 +208,8 @@ def architecture_diagram(modules):
     dot = Digraph()
     dot.attr(rankdir="LR")
 
+    apply_style(dot)
+
     dot.node("User")
     prev = "User"
 
@@ -141,6 +231,8 @@ def architecture_diagram(modules):
 def workflow_diagram(steps):
 
     dot = Digraph()
+
+    apply_style(dot)
 
     dot.node("Start")
     prev = "Start"
@@ -164,6 +256,8 @@ def technology_diagram(techs):
 
     dot = Digraph()
 
+    apply_style(dot)
+
     dot.node("System")
 
     for i, tech in enumerate(techs):
@@ -181,6 +275,8 @@ def dataflow_diagram(modules):
 
     dot = Digraph()
     dot.attr(rankdir="LR")
+
+    apply_style(dot)
 
     for i in range(len(modules)-1):
         dot.node(modules[i])

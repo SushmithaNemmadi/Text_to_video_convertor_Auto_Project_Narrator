@@ -28,7 +28,7 @@ def load_llm():
     return OllamaLLM(
         model=OLLAMA_MODEL,
         temperature=0,
-        num_predict=1200
+        num_predict=700
     )
 
 
@@ -47,23 +47,59 @@ def read_project():
 
 
 # ==============================
+# COUNT SCENES
+# ==============================
+
+def count_scenes(text):
+    return len(re.findall(r"Scene\s+\d+", text))
+
+
+# ==============================
 # GENERATE STORYBOARD
 # ==============================
 
 def generate_storyboard(project_text, llm):
 
     prompt = f"""
-You are creating a storyboard for a technical YouTube explainer video.
+Create a storyboard for a YouTube educational explainer video.
 
 Project description:
 {project_text}
 
-You MUST create exactly {TOTAL_SCENES} scenes.
+IMPORTANT:
+You MUST generate EXACTLY {TOTAL_SCENES} scenes.
 
-IMPORTANT RULES:
-- Do NOT generate fewer than {TOTAL_SCENES} scenes
-- Do NOT generate more than {TOTAL_SCENES} scenes
-- Each scene must explain a different part of the system
+Do NOT generate more or less than {TOTAL_SCENES} scenes.
+
+Scene structure MUST follow:
+
+Scene 1 → What is the project (overview)
+
+Scene 2 → Why the project is needed (problem + purpose)
+
+Scene 3 → How the system works (workflow diagram)
+
+Scene 4 → How to start building the project
+
+Scene 5 → Information/data required for the project
+
+Scene 6 → Software requirements
+
+Scene 7 → Hardware requirements
+
+Scene 8 → System inputs
+
+Scene 9 → System outputs
+
+Scene 10 → Benefits and final conclusion
+
+RULES:
+
+• Narration must be short (1–2 sentences)
+• Visual must describe an educational infographic or diagram
+• Each visual must be completely different
+• Avoid developer coding scenes
+• Output MUST stop after Scene 10
 
 STRICT FORMAT:
 
@@ -75,12 +111,40 @@ Scene 2
 Narration: ...
 Visual: ...
 
-Continue until Scene {TOTAL_SCENES}.
+Continue until Scene 10 only.
 """
 
-    result = llm.invoke(prompt)
+    # retry until correct scenes
+    for attempt in range(3):
 
-    return result.strip()
+        print(f"Generating storyboard attempt {attempt+1}...")
+
+        result = llm.invoke(prompt).strip()
+
+        scene_count = count_scenes(result)
+
+        if scene_count == TOTAL_SCENES:
+            print("Correct number of scenes generated.")
+            return result
+
+        print(f"Generated {scene_count} scenes. Retrying...\n")
+
+    # fallback: trim extra scenes
+    scenes = re.split(r"(Scene\s+\d+)", result)
+
+    final_text = ""
+    scene_counter = 0
+
+    for i in range(1, len(scenes), 2):
+
+        scene_counter += 1
+
+        if scene_counter > TOTAL_SCENES:
+            break
+
+        final_text += scenes[i] + scenes[i+1]
+
+    return final_text.strip()
 
 
 # ==============================
